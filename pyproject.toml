@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "content-automation-pipeline"
+dynamic = ["version"]
+description = "An end-to-end AI-powered pipeline for researching, generating, rendering, and publishing YouTube Shorts."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Andrei Cătălin Olariu", email = "andreicatalin.swl@gmail.com" },
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+]
+
+[project.scripts]
+content-automation-pipeline = "content_automation_pipeline.__main__:main"
+
+[tool.hatch.version]
+path = "src/content_automation_pipeline/__about__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/content_automation_pipeline"]
