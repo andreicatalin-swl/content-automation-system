@@ -8,7 +8,6 @@ dynamic = ["version"]
 description = "An end-to-end AI-powered pipeline for researching, generating, rendering, and publishing YouTube Shorts."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
 authors = [
     { name = "Andrei Cătălin Olariu", email = "andreicatalin.swl@gmail.com" },
 ]
