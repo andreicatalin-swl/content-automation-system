@@ -10,7 +10,6 @@ _logger = create_logger(__name__)
 
 class ArtifactManager:
     def __init__(self, root: Path) -> None:
-        # Set the root directory field
         self._root = root.resolve()
 
     def path(self, artifact: Artifact) -> Path:
