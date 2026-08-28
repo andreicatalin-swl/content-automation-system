@@ -18,15 +18,18 @@ def create_logger(
     logger: logging.Logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
+    # If the logger has already been configured (e.g., handlers have been added), return it as is
     if logger.handlers:
         return logger
 
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+    # Set up console handler
     console_handler: logging.Handler = logging.StreamHandler()
     console_handler.setLevel(console_level)
     console_handler.setFormatter(formatter)
 
+    # Set up file handler
     log_file.parent.mkdir(parents=True, exist_ok=True)
     file_handler: logging.Handler = logging.FileHandler(log_file)
     file_handler.setLevel(file_level)
