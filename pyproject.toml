@@ -14,8 +14,12 @@ authors = [
 dependencies = [
     "filelock>=3.0",
     "imageio-ffmpeg>=0.5",
+    "langchain>=0.3",
+    "langchain-anthropic>=0.3",
     "langchain-core>=0.3",
+    "langchain-groq>=0.2",
     "langgraph>=0.2",
+    "pydantic>=2.0",
     "yt-dlp>=2024.1",
 ]
 

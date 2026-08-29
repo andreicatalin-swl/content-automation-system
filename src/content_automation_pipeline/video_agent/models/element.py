@@ -1,9 +1,8 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-@dataclass(frozen=True, slots=True)
-class Element:
+class Element(BaseModel):
     pass

@@ -8,10 +8,10 @@ from typing import Any, Final
 
 import imageio_ffmpeg  # type: ignore
 import yt_dlp
+from langchain_core.tools import BaseTool, tool
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
-from content_automation_pipeline.tools.tool import Tool
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -28,6 +28,10 @@ class Identity(ProcessingStrategy):
 
         artifact = Artifact(Kind.TEMPORARY, category, path.name)
         artifact_manager.publish(artifact, path, move=True)
+
+        message = f'finished identity processing for {path}'
+        _logger.info(message)
+
         return artifact
 
 class CenterTrim(ProcessingStrategy):
@@ -63,6 +67,10 @@ class CenterTrim(ProcessingStrategy):
 
         artifact = Artifact(Kind.TEMPORARY, category, path.name)
         artifact_manager.publish(artifact, trimmed_path, move=True)
+
+        message = f'finished center trim processing for {path}'
+        _logger.info(message)
+
         return artifact
 
     @staticmethod
@@ -78,9 +86,10 @@ class CenterTrim(ProcessingStrategy):
         hours, minutes, seconds = match.groups()
         return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
-class YoutubeDownloader(Tool):
+class YoutubeDownloader:
     # Default values that can be overridden by the user
     _DEFAULT_STRATEGY: Final[ProcessingStrategy] = Identity()
+    _DEFAULT_MAX_RESULTS: Final[int] = 5
 
     # Hardcoded values that cannot be overridden by the user
     _DOWNLOAD_FORMAT: Final[str] = 'bestvideo[ext=mp4][vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best'
@@ -103,10 +112,54 @@ class YoutubeDownloader(Tool):
                 'noprogress': True,
             }
 
+            message = f'downloading {url}'
+            _logger.info(message)
+
             with yt_dlp.YoutubeDL(options) as ydl:  # type: ignore
                 ydl.download([url])
 
-            message = f'downloaded {url} to {downloaded_path}'
+            message = f'finished downloading {url} to {downloaded_path}'
             _logger.info(message)
 
             return processing_strategy(downloaded_path, self._artifact_manager, self._category)
+
+    @staticmethod
+    def search(query: str, max_results: int = _DEFAULT_MAX_RESULTS) -> list[str]:
+        message = f'searching for {query!r}'
+        _logger.info(message)
+
+        options: dict[str, Any] = {
+            'quiet': True,
+            'noprogress': True,
+            'extract_flat': True,
+        }
+
+        with yt_dlp.YoutubeDL(options) as ydl:  # type: ignore
+            info = ydl.extract_info(f'ytsearch{max_results}:{query}', download=False)
+
+        entries = info.get('entries', []) if info else []
+        urls = [url for entry in entries if isinstance(url := entry.get('url'), str)]
+
+        message = f'finished searching for {query!r}, found {len(urls)} results'
+        _logger.info(message)
+
+        return urls
+
+def create_download_tool(artifact_manager: ArtifactManager, category: str) -> BaseTool:
+    youtube_downloader = YoutubeDownloader(artifact_manager, category)
+
+    @tool
+    def download(url: str) -> str:
+        """Download a YouTube video from the URL."""
+        artifact = youtube_downloader.download(url, processing_strategy=CenterTrim())
+        return f'Downloaded the video and saved it as artifact {artifact.name!r} in category {artifact.category!r}.'
+
+    return download
+
+def create_search_tool() -> BaseTool:
+    @tool
+    def search(query: str) -> list[str]:
+        """Search for YouTube videos matching the query."""
+        return YoutubeDownloader.search(query)
+
+    return search
