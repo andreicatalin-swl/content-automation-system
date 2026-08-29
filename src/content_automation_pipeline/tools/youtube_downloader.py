@@ -11,6 +11,7 @@ import yt_dlp
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
+from content_automation_pipeline.tools.tool import Tool
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -77,7 +78,7 @@ class CenterTrim(ProcessingStrategy):
         hours, minutes, seconds = match.groups()
         return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
-class YoutubeDownloader:
+class YoutubeDownloader(Tool):
     # Default values that can be overridden by the user
     _DEFAULT_STRATEGY: Final[ProcessingStrategy] = Identity()
 
