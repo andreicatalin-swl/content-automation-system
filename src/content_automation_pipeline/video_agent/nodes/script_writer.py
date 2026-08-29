@@ -13,9 +13,9 @@ T = TypeVar('T', bound=Script)
 
 class ScriptWriter(Generic[T]):
     # Default values that can be overridden by the user
-    _DEFATLT_MODEL: Final[str] = 'groq:llama-3.1-8b-instant'
+    _DEFAULT_MODEL: Final[str] = 'groq:llama-3.1-8b-instant'
 
-    def __init__(self, model: str = _DEFATLT_MODEL) -> None:
+    def __init__(self, model: str = _DEFAULT_MODEL) -> None:
         self._model = model
 
     def __call__(self, state: State[T]) -> T:
