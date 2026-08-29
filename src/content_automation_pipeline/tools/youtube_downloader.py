@@ -22,6 +22,9 @@ class ProcessingStrategy(ABC):
 
 class Identity(ProcessingStrategy):
     def __call__(self, path: Path, artifact_manager: ArtifactManager, category: str) -> Artifact:
+        message = f'using identity processing for {path}'
+        _logger.info(message)
+
         artifact = Artifact(Kind.TEMPORARY, category, path.name)
         artifact_manager.publish(artifact, path, move=True)
         return artifact
@@ -37,6 +40,9 @@ class CenterTrim(ProcessingStrategy):
         self._pad_seconds = pad_seconds
 
     def __call__(self, path: Path, artifact_manager: ArtifactManager, category: str) -> Artifact:
+        message = f'using center trim processing for {path} with pad_seconds={self._pad_seconds}'
+        _logger.info(message)
+
         ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
         duration = self._probe_duration(ffmpeg, path)
 
@@ -50,6 +56,9 @@ class CenterTrim(ProcessingStrategy):
             check=True,
             capture_output=True,
         )
+
+        message = f'trimmed {path} to {trimmed_path}'
+        _logger.info(message)
 
         artifact = Artifact(Kind.TEMPORARY, category, path.name)
         artifact_manager.publish(artifact, trimmed_path, move=True)
@@ -95,5 +104,8 @@ class YoutubeDownloader:
 
             with yt_dlp.YoutubeDL(options) as ydl:  # type: ignore
                 ydl.download([url])
+
+            message = f'downloaded {url} to {downloaded_path}'
+            _logger.info(message)
 
             return processing_strategy(downloaded_path, self._artifact_manager, self._category)
