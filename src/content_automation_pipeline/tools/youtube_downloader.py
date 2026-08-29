@@ -94,11 +94,17 @@ class YoutubeDownloader:
     # Hardcoded values that cannot be overridden by the user
     _DOWNLOAD_FORMAT: Final[str] = 'bestvideo[ext=mp4][vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best'
 
-    def __init__(self, artifact_manager: ArtifactManager, category: str) -> None:
+    def __init__(
+        self,
+        artifact_manager: ArtifactManager,
+        category: str,
+        processing_strategy: ProcessingStrategy = _DEFAULT_STRATEGY,
+    ) -> None:
         self._artifact_manager = artifact_manager
         self._category = category
+        self._processing_strategy = processing_strategy
 
-    def download(self, url: str, processing_strategy: ProcessingStrategy = _DEFAULT_STRATEGY) -> Artifact:
+    def download(self, url: str) -> Artifact:
         with tempfile.TemporaryDirectory() as tmp_dir:
             name = f'{uuid.uuid4().hex}.mp4'
             downloaded_path = Path(tmp_dir) / name
@@ -121,7 +127,7 @@ class YoutubeDownloader:
             message = f'finished downloading {url} to {downloaded_path}'
             _logger.info(message)
 
-            return processing_strategy(downloaded_path, self._artifact_manager, self._category)
+            return self._processing_strategy(downloaded_path, self._artifact_manager, self._category)
 
     @staticmethod
     def search(query: str, max_results: int = _DEFAULT_MAX_RESULTS) -> list[str]:
@@ -145,11 +151,11 @@ class YoutubeDownloader:
 
         return urls
 
-def create_download_tool(youtube_downloader: YoutubeDownloader, processing_strategy: ProcessingStrategy) -> BaseTool:
+def create_download_tool(youtube_downloader: YoutubeDownloader) -> BaseTool:
     @tool
     def download(url: str) -> str:
         """Download a YouTube video from the URL."""
-        artifact = youtube_downloader.download(url, processing_strategy=processing_strategy)
+        artifact = youtube_downloader.download(url)
         return (
             f'Downloaded the video from {url!r} and saved it as artifact {artifact.name!r} '
             f'(kind={artifact.kind}, category={artifact.category!r}).'
