@@ -145,21 +145,28 @@ class YoutubeDownloader:
 
         return urls
 
-def create_download_tool(artifact_manager: ArtifactManager, category: str) -> BaseTool:
-    youtube_downloader = YoutubeDownloader(artifact_manager, category)
-
+def create_download_tool(youtube_downloader: YoutubeDownloader, processing_strategy: ProcessingStrategy) -> BaseTool:
     @tool
     def download(url: str) -> str:
         """Download a YouTube video from the URL."""
-        artifact = youtube_downloader.download(url, processing_strategy=CenterTrim())
-        return f'Downloaded the video and saved it as artifact {artifact.name!r} in category {artifact.category!r}.'
+        artifact = youtube_downloader.download(url, processing_strategy=processing_strategy)
+        return (
+            f'Downloaded the video from {url!r} and saved it as artifact {artifact.name!r} '
+            f'(kind={artifact.kind}, category={artifact.category!r}).'
+        )
 
     return download
 
 def create_search_tool() -> BaseTool:
     @tool
-    def search(query: str) -> list[str]:
+    def search(query: str) -> str:
         """Search for YouTube videos matching the query."""
-        return YoutubeDownloader.search(query)
+        urls = YoutubeDownloader.search(query)
+
+        if not urls:
+            return f'No results found for {query!r}.'
+
+        results = '\n'.join(urls)
+        return f'Found {len(urls)} result(s) for {query!r}:\n{results}'
 
     return search
