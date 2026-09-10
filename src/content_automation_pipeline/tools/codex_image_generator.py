@@ -24,7 +24,6 @@ class CodexImageGenerator:
     def __init__(self, artifact_manager: ArtifactManager, category: str) -> None:
         self._artifact_manager = artifact_manager
         self._category = category
-        self._codex = openai_codex.Codex()
 
     def generate(self, prompt: str) -> Artifact:
         message = f'generating image for prompt={prompt!r}'
@@ -34,13 +33,14 @@ class CodexImageGenerator:
             output_path = Path(tmp_dir) / f'{uuid.uuid4().hex}{self._IMAGE_EXTENSION}'
             instruction = self._INSTRUCTION_TEMPLATE.format(output_path=output_path, prompt=prompt)
 
-            thread = self._codex.thread_start()
-            thread.run(instruction)
-
-            if not output_path.exists():
-                message = f'codex did not produce an image at {output_path}'
+            try:
+                with openai_codex.Codex() as codex:
+                    thread = codex.thread_start()
+                    thread.run(instruction)
+            except openai_codex.CodexError as error:
+                message = f'codex failed to generate an image for prompt={prompt!r}: {error}'
                 _logger.error(message)
-                raise RuntimeError(message)
+                raise
 
             artifact = Artifact(Kind.TEMPORARY, self._category, output_path.name)
             self._artifact_manager.publish(artifact, output_path, move=True)
