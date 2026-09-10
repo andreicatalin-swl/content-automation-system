@@ -11,7 +11,7 @@ _logger = create_logger(__name__)
 
 T = TypeVar('T', bound=Content)
 
-class ContentWriter(Generic[T]):
+class ContentGenerator(Generic[T]):
     # Default values that can be overridden by the user
     _DEFAULT_MODEL: Final[str] = 'groq:llama-3.1-8b-instant'
     _DEFAULT_RECURSION_LIMIT: Final[int] = 25
