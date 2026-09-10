@@ -4,6 +4,7 @@ from langchain.agents import create_agent  # type: ignore
 from langchain.chat_models import init_chat_model
 from pydantic import BaseModel
 
+from content_automation_pipeline.content_agent.states.final_state import FinalState
 from content_automation_pipeline.content_agent.states.state import State
 from content_automation_pipeline.utilities.logger import create_logger
 
@@ -20,7 +21,7 @@ class ContentGenerator(Generic[T]):
         self._model = model
         self._recursion_limit = recursion_limit
 
-    def __call__(self, state: State[T]) -> State[T]:
+    def __call__(self, state: State[T]) -> FinalState[T]:
         message = f'generating content with model={self._model}'
         _logger.info(message)
 
@@ -31,9 +32,4 @@ class ContentGenerator(Generic[T]):
         message = f'finished generating content with model={self._model}'
         _logger.info(message)
 
-        return State(
-            content_schema=state['content_schema'],
-            tools=state['tools'],
-            prompt=state['prompt'],
-            content=content,
-        )
+        return FinalState(content=content)
