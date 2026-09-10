@@ -154,7 +154,7 @@ class YoutubeDownloader:
 def create_download_tool(youtube_downloader: YoutubeDownloader) -> BaseTool:
     @tool
     def download(url: str) -> str:
-        """Download a YouTube video from the URL."""
+        """Download a YouTube video from a URL, save it as an artifact, and return a string summary of the result."""
         artifact = youtube_downloader.download(url)
         return (
             f'Downloaded the video from {url!r} and saved it as artifact {artifact.name!r} '
@@ -166,7 +166,7 @@ def create_download_tool(youtube_downloader: YoutubeDownloader) -> BaseTool:
 def create_search_tool() -> BaseTool:
     @tool
     def search(query: str) -> str:
-        """Search for YouTube videos matching the query."""
+        """Search YouTube for videos matching a query, and return a string summary of the results."""
         urls = YoutubeDownloader.search(query)
 
         if not urls:
