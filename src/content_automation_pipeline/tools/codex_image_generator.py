@@ -4,7 +4,6 @@ from tempfile import TemporaryDirectory
 from typing import Final
 
 import openai_codex
-from langchain_core.tools import BaseTool, tool
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
@@ -49,15 +48,3 @@ class CodexImageGenerator:
         _logger.info(message)
 
         return artifact
-
-def create_generate_tool(codex_image_generator: CodexImageGenerator) -> BaseTool:
-    @tool
-    def generate(prompt: str) -> str:
-        """Generate an image from a text prompt, save it as an artifact, and return a string summary of the result."""
-        artifact = codex_image_generator.generate(prompt)
-        return (
-            f'Generated an image for {prompt!r} and saved it as artifact {artifact.name!r} '
-            f'(kind={artifact.kind}, category={artifact.category!r}).'
-        )
-
-    return generate

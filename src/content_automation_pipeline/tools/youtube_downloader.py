@@ -8,7 +8,6 @@ from typing import Any, Final
 
 import imageio_ffmpeg  # type: ignore
 import yt_dlp
-from langchain_core.tools import BaseTool, tool
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
@@ -150,29 +149,3 @@ class YoutubeDownloader:
         _logger.info(message)
 
         return urls
-
-def create_download_tool(youtube_downloader: YoutubeDownloader) -> BaseTool:
-    @tool
-    def download(url: str) -> str:
-        """Download a YouTube video from a URL, save it as an artifact, and return a string summary of the result."""
-        artifact = youtube_downloader.download(url)
-        return (
-            f'Downloaded the video from {url!r} and saved it as artifact {artifact.name!r} '
-            f'(kind={artifact.kind}, category={artifact.category!r}).'
-        )
-
-    return download
-
-def create_search_tool() -> BaseTool:
-    @tool
-    def search(query: str) -> str:
-        """Search YouTube for videos matching a query, and return a string summary of the results."""
-        urls = YoutubeDownloader.search(query)
-
-        if not urls:
-            return f'No results found for {query!r}.'
-
-        results = '\n'.join(urls)
-        return f'Found {len(urls)} result(s) for {query!r}:\n{results}'
-
-    return search
