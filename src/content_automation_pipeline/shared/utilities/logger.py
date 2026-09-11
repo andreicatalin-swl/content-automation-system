@@ -18,12 +18,12 @@ def create_logger(
     logger: logging.Logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
-    # Keep records on this logger so the handlers of its ancestors do not emit them again
-    logger.propagate = False
-
     # If the logger has already been configured (e.g., handlers have been added), return it as is
     if logger.handlers:
         return logger
+
+    # Keep records on this logger so the handlers of its ancestors do not emit them again
+    logger.propagate = False
 
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
