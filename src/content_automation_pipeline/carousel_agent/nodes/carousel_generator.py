@@ -1,15 +1,12 @@
 from typing import Final
 
-from langchain.agents import create_agent  # type: ignore
+from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
 
 from content_automation_pipeline.carousel_agent.models.content import Content
 from content_automation_pipeline.carousel_agent.states.state import State
-from content_automation_pipeline.tools.codex_image_generator import (
-    CodexImageGenerator,
-    create_generate_tool,
-)
+from content_automation_pipeline.tools.codex_image_generator import CodexImageGenerator
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -21,10 +18,10 @@ class CarouselGenerator:
 
     # Hardcoded values that cannot be overridden by the user
     _INSTRUCTION_TEMPLATE: Final[str] = (
-        'Generate a slideable social media carousel for the following context.\n\n'
+        'Design a slideable social media carousel of {number_slides} slides for the following context.\n\n'
         "Context: '{context}'\n\n"
-        'Generate one image per slide with your image generation tool, and write one caption per image. '
-        'Return the images and their captions in slide order, with exactly one caption per image.'
+        'For every slide, write an image generation prompt describing the image that belongs on it, '
+        'and the caption that goes with that image. Every prompt must describe a different image.'
     )
 
     def __init__(
@@ -38,17 +35,18 @@ class CarouselGenerator:
         self._recursion_limit = recursion_limit
 
     def __call__(self, state: State) -> State:
-        message = f'generating carousel with model={self._model}'
+        message = f'generating {state.number_slides} slide(s) with model={self._model}'
         _logger.info(message)
 
-        tools = [create_generate_tool(self._codex_image_generator)]
-        prompt = HumanMessage(self._INSTRUCTION_TEMPLATE.format(context=state.context))
+        agent = create_agent(init_chat_model(self._model), tools=[], response_format=Content)
+        instruction = HumanMessage(
+            self._INSTRUCTION_TEMPLATE.format(number_slides=state.number_slides, context=state.context)
+        )
+        content: Content = agent.invoke(
+            {'messages': [instruction]}, config={'recursion_limit': self._recursion_limit}
+        )['structured_response']
 
-        agent = create_agent(init_chat_model(self._model), tools=tools, response_format=Content)  # type: ignore
-        result = agent.invoke({'messages': [prompt]}, config={'recursion_limit': self._recursion_limit})  # type: ignore
-        content = result['structured_response']
-
-        message = f'finished generating carousel with model={self._model}'
+        message = f'finished generating {len(content.slides)} slide(s) with model={self._model}'
         _logger.info(message)
 
-        return State(content=content, context=state.context)
+        return state.model_copy(update={'slides': content.slides})
