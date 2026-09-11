@@ -1,11 +1,11 @@
 from collections.abc import Callable
 from typing import Generic, Self, TypeVar
 
-from langgraph.graph import END, START, StateGraph
-from langgraph.graph.state import CompiledStateGraph
+from langgraph.graph import END, START, StateGraph  # type: ignore
+from langgraph.graph.state import CompiledStateGraph  # type: ignore
 from pydantic import BaseModel
 
-from content_automation_pipeline.utilities.logger import create_logger
+from content_automation_pipeline.shared.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
@@ -20,21 +20,21 @@ class SequentialGraphFactory(Generic[T]):
         self._nodes.append((name, node))
         return self
 
-    def compile(self) -> CompiledStateGraph:
+    def compile(self) -> CompiledStateGraph:  # type: ignore
         message = f'compiling sequential graph with {len(self._nodes)} node(s)'
         _logger.info(message)
 
         # Add nodes to the graph sequentially
         previous = START
         for name, node in self._nodes:
-            self._graph.add_node(name, node)
+            self._graph.add_node(name, node)  # type: ignore
             self._graph.add_edge(previous, name)
             previous = name
         self._graph.add_edge(previous, END)
 
-        compiled: CompiledStateGraph = self._graph.compile()
+        compiled: CompiledStateGraph = self._graph.compile()  # type: ignore
 
         message = f'finished compiling sequential graph with {len(self._nodes)} node(s)'
         _logger.info(message)
 
-        return compiled
+        return compiled  # type: ignore

@@ -6,8 +6,10 @@ from langchain_core.messages import HumanMessage
 
 from content_automation_pipeline.carousel_agent.models.content import Content
 from content_automation_pipeline.carousel_agent.states.state import State
-from content_automation_pipeline.tools.codex_image_generator import CodexImageGenerator
-from content_automation_pipeline.utilities.logger import create_logger
+from content_automation_pipeline.shared.tools.codex_image_generator import (
+    CodexImageGenerator,
+)
+from content_automation_pipeline.shared.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 

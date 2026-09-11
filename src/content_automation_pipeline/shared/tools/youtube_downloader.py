@@ -9,9 +9,11 @@ from typing import Any, Final
 import imageio_ffmpeg  # type: ignore
 import yt_dlp
 
-from content_automation_pipeline.artifacts.artifact import Artifact, Kind
-from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
-from content_automation_pipeline.utilities.logger import create_logger
+from content_automation_pipeline.shared.artifacts.artifact import Artifact, Kind
+from content_automation_pipeline.shared.artifacts.artifact_manager import (
+    ArtifactManager,
+)
+from content_automation_pipeline.shared.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
