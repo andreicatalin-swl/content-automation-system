@@ -3,15 +3,13 @@ from typing import Final
 from langgraph.graph import END, START, StateGraph  # type: ignore
 from langgraph.graph.state import CompiledStateGraph  # type: ignore
 
-from content_automation_pipeline.shared.artifacts.artifact import Kind
-from content_automation_pipeline.shared.artifacts.artifact_manager import (
-    ArtifactManager,
-)
-from content_automation_pipeline.shared.t2i_agent.nodes.decide import Decide
-from content_automation_pipeline.shared.t2i_agent.nodes.evaluate import Evaluate
-from content_automation_pipeline.shared.t2i_agent.nodes.generate import Generate
-from content_automation_pipeline.shared.t2i_agent.states.state import State
-from content_automation_pipeline.shared.utilities.logger import create_logger
+from content_automation_pipeline.artifacts.artifact import Kind
+from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
+from content_automation_pipeline.t2i_agent.nodes.decide import Decide
+from content_automation_pipeline.t2i_agent.nodes.evaluate import Evaluate
+from content_automation_pipeline.t2i_agent.nodes.generate import Generate
+from content_automation_pipeline.t2i_agent.states.state import State
+from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
