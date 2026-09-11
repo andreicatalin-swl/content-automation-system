@@ -16,11 +16,15 @@ def create_logger(
     file_level: int = _DEFAULT_FILE_LEVEL,
 ) -> logging.Logger:
     logger: logging.Logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
 
-    # If the logger has already been configured (e.g., handlers have been added), return it as is
-    if logger.handlers:
+    # Determine if the logger has already been configured
+    is_configured = bool(logger.handlers)
+    # If the logger has already been configured, return it as is
+    if is_configured:
         return logger
+
+    # Set the logger level to DEBUG to capture all log messages
+    logger.setLevel(logging.DEBUG)
 
     # Keep records on this logger so the handlers of its ancestors do not emit them again
     logger.propagate = False
