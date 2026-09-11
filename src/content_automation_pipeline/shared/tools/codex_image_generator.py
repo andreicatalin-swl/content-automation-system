@@ -27,7 +27,7 @@ class CodexImageGenerator:
         self._category = category
 
     def generate(self, prompt: str) -> Artifact:
-        message = f'generating image for prompt={prompt!r}'
+        message = f'generating image for prompt={prompt}'
         _logger.info(message)
 
         with TemporaryDirectory() as tmp_dir:
@@ -39,14 +39,14 @@ class CodexImageGenerator:
                     thread = codex.thread_start()
                     thread.run(instruction)
             except openai_codex.CodexError as error:
-                message = f'codex failed to generate an image for prompt={prompt!r}: {error}'
+                message = f'codex failed to generate an image for prompt={prompt}: {error}'
                 _logger.error(message)
                 raise
 
             artifact = Artifact(Kind.TEMPORARY, self._category, output_path.name)
             self._artifact_manager.publish(artifact, output_path, move=True)
 
-        message = f'finished generating image for prompt={prompt!r}'
+        message = f'finished generating image for prompt={prompt}'
         _logger.info(message)
 
         return artifact

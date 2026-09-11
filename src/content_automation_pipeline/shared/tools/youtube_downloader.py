@@ -132,7 +132,7 @@ class YoutubeDownloader:
 
     @staticmethod
     def search(query: str, max_results: int = _DEFAULT_MAX_RESULTS) -> list[str]:
-        message = f'searching for {query!r}'
+        message = f'searching for {query}'
         _logger.info(message)
 
         options: dict[str, Any] = {
@@ -147,7 +147,7 @@ class YoutubeDownloader:
         entries = info.get('entries', []) if info else []
         urls = [url for entry in entries if isinstance(url := entry.get('url'), str)]
 
-        message = f'finished searching for {query!r}, found {len(urls)} results'
+        message = f'finished searching for {query}, found {len(urls)} results'
         _logger.info(message)
 
         return urls
