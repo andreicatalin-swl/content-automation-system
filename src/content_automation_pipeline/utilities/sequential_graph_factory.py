@@ -11,7 +11,7 @@ _logger = create_logger(__name__)
 
 T = TypeVar('T', bound=BaseModel)
 
-class Sequential(Generic[T]):
+class SequentialGraphFactory(Generic[T]):
     def __init__(self, state_type: type[T]) -> None:
         self._nodes: list[tuple[str, Callable[[T], T]]] = []
         self._graph = StateGraph(state_type)
