@@ -11,7 +11,6 @@ _logger = create_logger(__name__)
 
 class Evaluate:
     # Hardcoded values that cannot be overridden by the user
-    _SANDBOX: Final[openai_codex.Sandbox] = openai_codex.Sandbox.read_only
     _INSTRUCTION_TEMPLATE: Final[str] = (
         'Evaluate the attached image against the description it was generated from.\n\n'
         'Description: {prompt}\n\n'
@@ -48,7 +47,7 @@ class Evaluate:
 
         # Use Codex to grade the image against the prompt it was generated from
         with openai_codex.Codex() as codex:
-            thread = codex.thread_start(sandbox=self._SANDBOX)
+            thread = codex.thread_start(sandbox=openai_codex.Sandbox.read_only)
             result = thread.run(
                 [openai_codex.TextInput(text=instruction), openai_codex.LocalImageInput(path=str(image_path))],
                 output_schema=Evaluation.model_json_schema(),

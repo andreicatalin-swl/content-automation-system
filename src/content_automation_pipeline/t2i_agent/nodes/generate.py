@@ -15,7 +15,6 @@ _logger = create_logger(__name__)
 class Generate:
     # Hardcoded values that cannot be overridden by the user
     _IMAGE_EXTENSION: Final[str] = '.png'
-    _SANDBOX: Final[openai_codex.Sandbox] = openai_codex.Sandbox.workspace_write
     _PNG_SIGNATURE: Final[bytes] = b'\x89PNG\r\n\x1a\n'
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
     _INSTRUCTION_TEMPLATE: Final[str] = (
@@ -56,7 +55,7 @@ class Generate:
 
             # Use Codex to generate the image based on the instruction
             with openai_codex.Codex() as codex:
-                thread = codex.thread_start(cwd=tmp_dir, sandbox=self._SANDBOX)
+                thread = codex.thread_start(cwd=tmp_dir, sandbox=openai_codex.Sandbox.workspace_write)
                 thread.run(instruction)
 
             state.generation_attempts += 1
