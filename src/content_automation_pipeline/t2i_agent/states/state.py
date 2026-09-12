@@ -7,8 +7,6 @@ from content_automation_pipeline.utilities.logger import create_logger
 _logger = create_logger(__name__)
 
 class State(BaseModel):
-    # Forbid extra fields so no node can write a field the state does not declare,
-    # reject values of the wrong type instead of coercing them, and validate every assignment
     model_config = ConfigDict(extra='forbid', strict=True, validate_assignment=True)
 
     prompt: str
