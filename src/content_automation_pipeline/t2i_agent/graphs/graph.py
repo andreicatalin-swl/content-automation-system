@@ -6,8 +6,14 @@ from langgraph.graph.state import CompiledStateGraph  # type: ignore
 from content_automation_pipeline.artifacts.artifact import Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
 from content_automation_pipeline.t2i_agent.nodes.decide import Decide
-from content_automation_pipeline.t2i_agent.nodes.evaluate import Evaluate
-from content_automation_pipeline.t2i_agent.nodes.generate import Generate
+from content_automation_pipeline.t2i_agent.nodes.evaluate import (
+    CodexEvaluationStrategy,
+    Evaluate,
+)
+from content_automation_pipeline.t2i_agent.nodes.generate import (
+    CodexGenerationStrategy,
+    Generate,
+)
 from content_automation_pipeline.t2i_agent.states.state import State
 from content_automation_pipeline.utilities.logger import create_logger
 
@@ -34,8 +40,11 @@ class Graph:
         message = 'building the T2I graph'
         _logger.info(message)
 
-        generate = Generate(artifact_manager, category, kind, max_generation_attempts)
-        evaluate = Evaluate(artifact_manager, max_evaluation_attempts)
+        generate_strategy = CodexGenerationStrategy(artifact_manager, category, kind)
+        generate = Generate(generate_strategy, max_generation_attempts)
+
+        evaluate_strategy = CodexEvaluationStrategy(artifact_manager)
+        evaluate = Evaluate(evaluate_strategy, max_evaluation_attempts)
 
         graph = StateGraph(State)
         graph.add_node(self._GENERATE_NODE, generate)  # type: ignore
