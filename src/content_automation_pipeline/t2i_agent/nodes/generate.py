@@ -59,7 +59,7 @@ class CodexGenerationStrategy(GenerationStrategy):
                 raise RuntimeError(message)
 
             # Publish the valid image as an artifact
-            artifact = Artifact(self._kind, self._category, output_path.name)
+            artifact = Artifact(kind=self._kind, category=self._category, name=output_path.name)
             self._artifact_manager.publish(artifact, output_path, move=True)
 
         return artifact

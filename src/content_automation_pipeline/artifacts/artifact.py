@@ -1,5 +1,6 @@
-from dataclasses import dataclass
 from enum import StrEnum
+
+from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.utilities.logger import create_logger
 
@@ -9,8 +10,9 @@ class Kind(StrEnum):
     TEMPORARY = 'temporary'
     PERSISTENT = 'persistent'
 
-@dataclass(frozen=True, slots=True)
-class Artifact:
+class Artifact(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True, frozen=True)
+
     kind: Kind
     category: str
     name: str

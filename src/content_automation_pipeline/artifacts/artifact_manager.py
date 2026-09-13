@@ -100,7 +100,7 @@ class ArtifactManager:
             return []
 
         names = sorted(path.name for path in directory.iterdir() if path.is_file() and not path.name.startswith('.'))
-        return [Artifact(kind, category, name) for name in names]
+        return [Artifact(kind=kind, category=category, name=name) for name in names]
 
     def _lock(self, path: Path) -> FileLock:
         path.parent.mkdir(parents=True, exist_ok=True)
