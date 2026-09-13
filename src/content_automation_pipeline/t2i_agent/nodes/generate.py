@@ -15,14 +15,13 @@ _logger = create_logger(__name__)
 
 class GenerationStrategy(ABC):
     @abstractmethod
-    def generate(self, prompt: str) -> Artifact:
+    def generate(self, prompt: str, feedback: str) -> Artifact:
         ...
 
 class CodexGenerationStrategy(GenerationStrategy):
     # Hardcoded values that cannot be overridden by the user
     _IMAGE_EXTENSION: Final[str] = '.png'
     _PNG_SIGNATURE: Final[bytes] = b'\x89PNG\r\n\x1a\n'
-    _NO_FEEDBACK: Final[str] = 'there is no feedback.'
     _INSTRUCTION_TEMPLATE: Final[str] = (
         'Generate an image using your built-in image generation tool.\n\n'
         'Description: {prompt}\n\n'
@@ -40,12 +39,12 @@ class CodexGenerationStrategy(GenerationStrategy):
         self._category = category
         self._kind = kind
 
-    def generate(self, prompt: str) -> Artifact:
+    def generate(self, prompt: str, feedback: str) -> Artifact:
         # Use a temporary directory to store the generated image before publishing it as an artifact
         with TemporaryDirectory() as tmp_dir:
             # Construct the instruction for Codex
             output_path = Path(tmp_dir) / f'{uuid.uuid4().hex}{self._IMAGE_EXTENSION}'
-            instruction = self._INSTRUCTION_TEMPLATE.format(feedback=self._NO_FEEDBACK, output_path=output_path, prompt=prompt)
+            instruction = self._INSTRUCTION_TEMPLATE.format(feedback=feedback, output_path=output_path, prompt=prompt)
 
             # Use Codex to generate the image based on the instruction
             with openai_codex.Codex() as codex:
@@ -79,6 +78,9 @@ class CodexGenerationStrategy(GenerationStrategy):
         return True
 
 class Generate:
+    # Hardcoded values that cannot be overridden by the user
+    _NO_FEEDBACK: Final[str] = 'there is no feedback.'
+
     _DEFAULT_MAX_ATTEMPTS: Final[int] = 1
 
     def __init__(
@@ -96,6 +98,12 @@ class Generate:
             _logger.error(message)
             raise RuntimeError(message)
 
+        # Check if there is feedback from a previous evaluation to generate the image again
+        if state.evaluation is None:
+            feedback = self._NO_FEEDBACK
+        else:
+            feedback = state.evaluation.feedback
+
         message = f'generating image for prompt={state.prompt}'
         _logger.info(message)
 
@@ -103,7 +111,7 @@ class Generate:
 
         # Retry with another generation if the strategy fails to produce an artifact
         try:
-            artifact = self._strategy.generate(state.prompt)
+            artifact = self._strategy.generate(state.prompt, feedback)
         except Exception:
             message = f'attempt {state.generation_attempts}/{self._max_attempts} failed to generate an image for prompt={state.prompt}'
             _logger.exception(message)
