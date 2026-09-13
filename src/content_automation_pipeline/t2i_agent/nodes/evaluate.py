@@ -32,9 +32,6 @@ class CodexEvaluationStrategy(EvaluationStrategy):
         self._artifact_manager = artifact_manager
 
     def evaluate(self, prompt: str, artifact: Artifact) -> Evaluation:
-        message = f'evaluating image for prompt={prompt}'
-        _logger.info(message)
-
         # Construct the instruction for Codex
         image_path = self._artifact_manager.path(artifact)
         instruction = self._INSTRUCTION_TEMPLATE.format(prompt=prompt)
@@ -55,12 +52,7 @@ class CodexEvaluationStrategy(EvaluationStrategy):
             _logger.error(message)
             raise RuntimeError(message)
 
-        evaluation = Evaluation.model_validate_json(final_response)
-
-        message = f'finished evaluating image for prompt={prompt} with grade={evaluation.grade}'
-        _logger.info(message)
-
-        return evaluation
+        return Evaluation.model_validate_json(final_response)
 
 class Evaluate:
     _DEFAULT_MAX_ATTEMPTS: Final[int] = 1
@@ -86,14 +78,22 @@ class Evaluate:
             _logger.error(message)
             raise RuntimeError(message)
 
+        message = f'evaluating image for prompt={state.prompt}'
+        _logger.info(message)
+
         state.evaluation_attempts += 1
 
         # Retry with another evaluation if the strategy fails to produce an evaluation
         try:
-            state.evaluation = self._strategy.evaluate(state.prompt, state.artifact)
+            evaluation = self._strategy.evaluate(state.prompt, state.artifact)
         except Exception:
             message = f'attempt {state.evaluation_attempts}/{self._max_attempts} failed to evaluate the image for prompt={state.prompt}'
             _logger.exception(message)
             return self(state)
+
+        state.evaluation = evaluation
+
+        message = f'finished evaluating image for prompt={state.prompt} with grade={evaluation.grade}'
+        _logger.info(message)
 
         return state

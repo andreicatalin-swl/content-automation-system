@@ -41,9 +41,6 @@ class CodexGenerationStrategy(GenerationStrategy):
         self._kind = kind
 
     def generate(self, prompt: str) -> Artifact:
-        message = f'generating image for prompt={prompt}'
-        _logger.info(message)
-
         # Use a temporary directory to store the generated image before publishing it as an artifact
         with TemporaryDirectory() as tmp_dir:
             # Construct the instruction for Codex
@@ -64,9 +61,6 @@ class CodexGenerationStrategy(GenerationStrategy):
             # Publish the valid image as an artifact
             artifact = Artifact(self._kind, self._category, output_path.name)
             self._artifact_manager.publish(artifact, output_path, move=True)
-
-        message = f'finished generating image for prompt={prompt} as artifact {artifact.name}'
-        _logger.info(message)
 
         return artifact
 
@@ -102,14 +96,22 @@ class Generate:
             _logger.error(message)
             raise RuntimeError(message)
 
+        message = f'generating image for prompt={state.prompt}'
+        _logger.info(message)
+
         state.generation_attempts += 1
 
         # Retry with another generation if the strategy fails to produce an artifact
         try:
-            state.artifact = self._strategy.generate(state.prompt)
+            artifact = self._strategy.generate(state.prompt)
         except Exception:
             message = f'attempt {state.generation_attempts}/{self._max_attempts} failed to generate an image for prompt={state.prompt}'
             _logger.exception(message)
             return self(state)
+
+        state.artifact = artifact
+
+        message = f'finished generating image for prompt={state.prompt} as artifact {artifact.name}'
+        _logger.info(message)
 
         return state
