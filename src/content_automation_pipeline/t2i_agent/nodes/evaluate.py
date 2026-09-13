@@ -49,10 +49,10 @@ class CodexEvaluationStrategy(EvaluationStrategy):
 
         final_response = result.final_response
 
-        # Fail if Codex did not return an evaluation
+        # Run verification to validate node output quality and correctness
         if not final_response:
             message = 'did not return an evaluation'
-            _logger.warning(message)
+            _logger.error(message)
             raise RuntimeError(message)
 
         evaluation = Evaluation.model_validate_json(final_response)
@@ -93,7 +93,7 @@ class Evaluate:
             state.evaluation = self._strategy.evaluate(state.prompt, state.artifact)
         except Exception:
             message = f'attempt {state.evaluation_attempts}/{self._max_attempts} failed to evaluate the image for prompt={state.prompt}'
-            _logger.warning(message, exc_info=True)
+            _logger.exception(message)
             return self(state)
 
         return state

@@ -55,10 +55,10 @@ class CodexGenerationStrategy(GenerationStrategy):
                 thread = codex.thread_start(cwd=tmp_dir, sandbox=openai_codex.Sandbox.workspace_write)
                 thread.run(instruction)
 
-            # Fail if the generated output is not a valid image
+            # Run verification to validate node output quality and correctness
             if not self._is_valid_image(output_path):
                 message = f'did not produce a valid image at {output_path}'
-                _logger.warning(message)
+                _logger.error(message)
                 raise RuntimeError(message)
 
             # Publish the valid image as an artifact
@@ -109,7 +109,7 @@ class Generate:
             state.artifact = self._strategy.generate(state.prompt)
         except Exception:
             message = f'attempt {state.generation_attempts}/{self._max_attempts} failed to generate an image for prompt={state.prompt}'
-            _logger.warning(message, exc_info=True)
+            _logger.exception(message)
             return self(state)
 
         return state
