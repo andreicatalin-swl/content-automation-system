@@ -19,7 +19,7 @@ class _Strategy(Strategy[str, Script]):
     def execute(self, input: str) -> Script:
         instruction = self._INSTRUCTION_TEMPLATE.format(instructions=input)
 
-        # Use Codex to generate script
+        # Use Codex to generate the script
         with openai_codex.Codex() as codex:
             thread = codex.thread_start(sandbox=openai_codex.Sandbox.read_only)
             result = thread.run(instruction, output_schema=Script.model_json_schema())
