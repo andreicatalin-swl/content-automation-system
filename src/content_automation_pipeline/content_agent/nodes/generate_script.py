@@ -34,7 +34,7 @@ class _Strategy(Strategy[str, Script]):
 
         return Script.model_validate_json(final_response)
 
-class Generate(RateLimitedNode[str, Script]):
+class GenerateScript(RateLimitedNode[str, Script]):
     def __init__(
         self,
         max_calls: int = RateLimitedNode._DEFAULT_MAX_CALLS,

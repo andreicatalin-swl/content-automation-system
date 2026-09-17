@@ -1,16 +1,21 @@
 from typing import Final
 
 import openai_codex
+from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.content_agent.models.evaluation import Evaluation
-from content_automation_pipeline.content_agent.models.script_evaluation_input import (
-    ScriptEvaluationInput,
-)
+from content_automation_pipeline.content_agent.models.script import Script
 from content_automation_pipeline.shared.node import Strategy
 from content_automation_pipeline.shared.rate_limited_node import RateLimitedNode
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
+
+class ScriptEvaluationInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    script: Script
+    instructions: str
 
 class _Strategy(Strategy[ScriptEvaluationInput, Evaluation]):
     # Hardcoded values that cannot be overridden by the user
@@ -41,7 +46,7 @@ class _Strategy(Strategy[ScriptEvaluationInput, Evaluation]):
 
         return Evaluation.model_validate_json(final_response)
 
-class Evaluate(RateLimitedNode[ScriptEvaluationInput, Evaluation]):
+class EvaluateScript(RateLimitedNode[ScriptEvaluationInput, Evaluation]):
     def __init__(
         self,
         max_calls: int = RateLimitedNode._DEFAULT_MAX_CALLS,
