@@ -122,12 +122,12 @@ class DownloadedMediaEvaluationOutput(BaseModel):
 
     evaluation: Evaluation
 
+# TODO: Implement proper execute(...) method
 class DownloadedMediaEvaluationStrategy(Strategy[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
     def execute(self, input: DownloadedMediaEvaluationInput) -> DownloadedMediaEvaluationOutput:
-        # TODO: Implement evaluation logic for downloaded media
         return DownloadedMediaEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
 
 class EvaluateDownloadedMedia(Node[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):

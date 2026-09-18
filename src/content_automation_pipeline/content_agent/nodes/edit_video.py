@@ -31,6 +31,7 @@ class VideoEditingOutput(BaseModel):
 
     video: Artifact
 
+# TODO: Implement proper _run_script(...) method
 class VideoEditingStrategy(Strategy[VideoEditingInput, VideoEditingOutput]):
     def __init__(
         self,
@@ -51,7 +52,6 @@ class VideoEditingStrategy(Strategy[VideoEditingInput, VideoEditingOutput]):
 
         return VideoEditingOutput(video=artifact)
 
-    # TODO: Replace with the real script invocation
     def _run_script(self, input: VideoEditingInput) -> Path:
         script_path = Path(__file__).parent.parent / 'scripts' / 'countdown_10.js'
         video_path = Path(mkdtemp()) / f'{uuid.uuid4().hex}.mp4'
@@ -98,12 +98,12 @@ class EditedVideoEvaluationOutput(BaseModel):
 
     evaluation: Evaluation
 
+# TODO: Implement proper execute(...) method
 class EditedVideoEvaluationStrategy(Strategy[EditedVideoEvaluationInput, EditedVideoEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
     def execute(self, input: EditedVideoEvaluationInput) -> EditedVideoEvaluationOutput:
-        # TODO: Implement evaluation logic for the edited video
         return EditedVideoEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
 
 class EvaluateEditedVideo(Node[EditedVideoEvaluationInput, EditedVideoEvaluationOutput]):

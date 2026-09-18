@@ -157,12 +157,12 @@ class FoundMediaEvaluationOutput(BaseModel):
 
     evaluation: Evaluation
 
+# TODO: Implement proper execute(...) method
 class FoundMediaEvaluationStrategy(Strategy[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
     def execute(self, input: FoundMediaEvaluationInput) -> FoundMediaEvaluationOutput:
-        # TODO: Implement evaluation logic for found media
         return FoundMediaEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
 
 class EvaluateFoundMedia(Node[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):
