@@ -31,7 +31,7 @@ class _Strategy(Strategy[MediaFindingInput, MediaLinks]):
         'Decide what to search for on YouTube to find the video that best matches this entry.\n\n'
         'You are searching for: {media_type}\n\n'
         'Entry: {line}\n\n'
-        'Title and Subheading (for context only): {title1} {title2} — {subheading}\n\n'
+        'Title and Subheading (for context only): {title1} {title2} - {subheading}\n\n'
         'Instructions: {instructions}\n\n'
         'Feedback: {feedback}'
     )
