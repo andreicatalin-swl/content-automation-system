@@ -3,60 +3,76 @@ from typing import Final
 import openai_codex
 from pydantic import BaseModel, ConfigDict
 
-from content_automation_pipeline.content_agent.models.media_finding_input import (
-    MediaFindingInput,
+from content_automation_pipeline.content_agent.models.evaluation import (
+    Evaluation,
+    Grade,
 )
 from content_automation_pipeline.content_agent.models.media_links import (
     MediaLink,
     MediaLinks,
 )
+from content_automation_pipeline.content_agent.models.script import Script
 from content_automation_pipeline.content_agent.tools.youtube_downloader import (
     YoutubeDownloader,
 )
-from content_automation_pipeline.shared.node import Strategy
+from content_automation_pipeline.shared.node import Node, Strategy
 from content_automation_pipeline.shared.rate_limited_node import RateLimitedNode
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-class _SearchQuery(BaseModel):
+class MediaFindingInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
-    query: str
+    script: Script
+    instructions: str
 
-class _Strategy(Strategy[MediaFindingInput, MediaLinks]):
+class MediaFindingOutput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    media_links: MediaLinks
+
+class MediaFindingStrategy(Strategy[MediaFindingInput, MediaFindingOutput]):
+    # Default values that can be overridden by the user
+    _DEFAULT_MAX_QUERY_ATTEMPTS: Final[int] = 1
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
     _INSTRUCTION_TEMPLATE: Final[str] = (
-        'Decide what to search for on YouTube to find the video that best matches this entry.\n\n'
-        'You are searching for: {media_type}\n\n'
+        'Decide what to search for on YouTube to find the {media_type} that best matches the entry, '
+        'following the instructions.\n\n'
         'Entry: {line}\n\n'
-        'Title and Subheading (for context only): {title1} {title2} - {subheading}\n\n'
+        'Title and subheading for context: {title1} {title2} - {subheading}\n\n'
         'Instructions: {instructions}\n\n'
         'Feedback: {feedback}'
     )
 
-    def __init__(self, max_query_attempts: int) -> None:
+    def __init__(
+        self,
+        max_query_attempts: int = _DEFAULT_MAX_QUERY_ATTEMPTS,
+    ) -> None:
         self._max_query_attempts = max_query_attempts
         self._search = YoutubeDownloader.search
 
-    def execute(self, input: MediaFindingInput) -> MediaLinks:
+    def execute(self, input: MediaFindingInput) -> MediaFindingOutput:
         script = input.script
         entries = [
             self._find_entry_link(entry.line, script.title1, script.title2, script.subheading, input.instructions)
             for entry in script.entries
         ]
 
-        return MediaLinks(entries=entries)
+        return MediaFindingOutput(media_links=MediaLinks(entries=entries))
 
     def _find_entry_link(self, line: str, title1: str, title2: str, subheading: str, instructions: str) -> MediaLink:
-        video_link = self._find_link('video', line, title1, title2, subheading, instructions)
-        audio_link = self._find_link('audio', line, title1, title2, subheading, instructions)
+        with openai_codex.Codex() as codex:
+            thread = codex.thread_start(sandbox=openai_codex.Sandbox.read_only)
+            video_link = self._find_link(thread, 'video', line, title1, title2, subheading, instructions)
+            audio_link = self._find_link(thread, 'audio', line, title1, title2, subheading, instructions)
 
         return MediaLink(video_link=video_link, audio_link=audio_link)
 
     def _find_link(
         self,
+        thread: openai_codex.Thread,
         media_type: str,
         line: str,
         title1: str,
@@ -67,7 +83,7 @@ class _Strategy(Strategy[MediaFindingInput, MediaLinks]):
         feedback = self._NO_FEEDBACK
 
         for attempt in range(self._max_query_attempts):
-            query = self._ask_for_query(media_type, line, title1, title2, subheading, instructions, feedback)
+            query = self._ask_for_query(thread, media_type, line, title1, title2, subheading, instructions, feedback)
             results = self._search(query)
 
             if results:
@@ -83,6 +99,7 @@ class _Strategy(Strategy[MediaFindingInput, MediaLinks]):
 
     def _ask_for_query(
         self,
+        thread: openai_codex.Thread,
         media_type: str,
         line: str,
         title1: str,
@@ -91,6 +108,11 @@ class _Strategy(Strategy[MediaFindingInput, MediaLinks]):
         instructions: str,
         feedback: str,
     ) -> str:
+        class _SearchQuery(BaseModel):
+            model_config = ConfigDict(extra='forbid', strict=True)
+
+            query: str
+
         instruction = self._INSTRUCTION_TEMPLATE.format(
             media_type=media_type,
             line=line,
@@ -101,11 +123,7 @@ class _Strategy(Strategy[MediaFindingInput, MediaLinks]):
             feedback=feedback,
         )
 
-        # The output schema has no url field, so Codex can only ever hand back a search query, never a URL
-        with openai_codex.Codex() as codex:
-            thread = codex.thread_start(sandbox=openai_codex.Sandbox.read_only)
-            result = thread.run(instruction, output_schema=_SearchQuery.model_json_schema())
-
+        result = thread.run(instruction, output_schema=_SearchQuery.model_json_schema())
         final_response = result.final_response
 
         # Narrow to str
@@ -116,13 +134,40 @@ class _Strategy(Strategy[MediaFindingInput, MediaLinks]):
 
         return _SearchQuery.model_validate_json(final_response).query
 
-class FindMedia(RateLimitedNode[MediaFindingInput, MediaLinks]):
-    # Default values that can be overridden by the user
-    _DEFAULT_MAX_QUERY_ATTEMPTS: Final[int] = 1
-
+class FindMedia(RateLimitedNode[MediaFindingInput, MediaFindingOutput]):
     def __init__(
         self,
-        max_query_attempts: int = _DEFAULT_MAX_QUERY_ATTEMPTS,
+        strategy: Strategy[MediaFindingInput, MediaFindingOutput],
         max_calls: int = RateLimitedNode._DEFAULT_MAX_CALLS,
     ) -> None:
-        super().__init__(_Strategy(max_query_attempts), max_calls)
+        super().__init__(strategy, max_calls)
+
+class FoundMediaEvaluationInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    # Input for the FindMedia node
+    media_finding_input: MediaFindingInput
+    # Output from the FindMedia node
+    media_finding_output: MediaFindingOutput
+    # Instructions for evaluating output given the input
+    evaluation_instructions: str
+
+class FoundMediaEvaluationOutput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    evaluation: Evaluation
+
+class FoundMediaEvaluationStrategy(Strategy[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):
+    # Hardcoded values that cannot be overridden by the user
+    _NO_FEEDBACK: Final[str] = 'there is no feedback.'
+
+    def execute(self, input: FoundMediaEvaluationInput) -> FoundMediaEvaluationOutput:
+        # TODO: Implement evaluation logic for found media
+        return FoundMediaEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
+
+class EvaluateFoundMedia(Node[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):
+    def __init__(
+        self,
+        strategy: Strategy[FoundMediaEvaluationInput, FoundMediaEvaluationOutput],
+    ) -> None:
+        super().__init__(strategy)

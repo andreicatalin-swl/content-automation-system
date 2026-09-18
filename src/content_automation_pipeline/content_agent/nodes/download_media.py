@@ -7,27 +7,39 @@ from tempfile import TemporaryDirectory
 from typing import Final
 
 import imageio_ffmpeg  # type: ignore
+from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
+from content_automation_pipeline.content_agent.models.evaluation import (
+    Evaluation,
+    Grade,
+)
 from content_automation_pipeline.content_agent.models.media_files import (
     MediaFile,
     MediaFiles,
 )
-from content_automation_pipeline.content_agent.models.media_links import (
-    MediaLink,
-    MediaLinks,
-)
+from content_automation_pipeline.content_agent.models.media_links import MediaLinks
 from content_automation_pipeline.content_agent.tools.youtube_downloader import (
     YoutubeDownloader,
 )
-from content_automation_pipeline.shared.node import Strategy
+from content_automation_pipeline.shared.node import Node, Strategy
 from content_automation_pipeline.shared.rate_limited_node import RateLimitedNode
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-class _Strategy(Strategy[MediaLinks, MediaFiles]):
+class MediaDownloadInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    media_links: MediaLinks
+
+class MediaDownloadOutput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    media_files: MediaFiles
+
+class MediaDownloadStrategy(Strategy[MediaDownloadInput, MediaDownloadOutput]):
     def __init__(
         self,
         artifact_manager: ArtifactManager,
@@ -39,19 +51,19 @@ class _Strategy(Strategy[MediaLinks, MediaFiles]):
         self._kind = kind
         self._downloader = YoutubeDownloader(artifact_manager, category)
 
-    def execute(self, input: MediaLinks) -> MediaFiles:
-        entries = [self._download_entry(entry) for entry in input.entries]
+    def execute(self, input: MediaDownloadInput) -> MediaDownloadOutput:
+        entries = [
+            MediaFile(
+                audio=self._download_file(entry.audio_link, self._downloader.download_mp3),
+                video=self._download_file(entry.video_link, self._downloader.download_mp4),
+            )
+            for entry in input.media_links.entries
+        ]
 
-        return MediaFiles(entries=entries)
+        return MediaDownloadOutput(media_files=MediaFiles(entries=entries))
 
-    def _download_entry(self, entry: MediaLink) -> MediaFile:
-        video = self._download(entry.video_link, self._downloader.download_mp4)
-        audio = self._download(entry.audio_link, self._downloader.download_mp3)
-
-        return MediaFile(audio=audio, video=video)
-
-    # TODO: Implement proper download method
-    def _download(self, url: str, download: Callable[[str], Artifact]) -> Artifact:
+    # TODO: Implement proper _download_file method
+    def _download_file(self, url: str, download: Callable[[str], Artifact]) -> Artifact:
         _WINDOW_SECONDS: Final[float] = 10.0
         _DURATION_PATTERN = re_compile(r'Duration: (\d+):(\d+):(\d+\.\d+)')
 
@@ -87,12 +99,40 @@ class _Strategy(Strategy[MediaLinks, MediaFiles]):
 
         return cropped
 
-class DownloadMedia(RateLimitedNode[MediaLinks, MediaFiles]):
+class DownloadMedia(RateLimitedNode[MediaDownloadInput, MediaDownloadOutput]):
     def __init__(
         self,
-        artifact_manager: ArtifactManager,
-        category: str,
-        kind: Kind,
+        strategy: Strategy[MediaDownloadInput, MediaDownloadOutput],
         max_calls: int = RateLimitedNode._DEFAULT_MAX_CALLS,
     ) -> None:
-        super().__init__(_Strategy(artifact_manager, category, kind), max_calls)
+        super().__init__(strategy, max_calls)
+
+class DownloadedMediaEvaluationInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    # Input for the DownloadMedia node
+    media_download_input: MediaDownloadInput
+    # Output from the DownloadMedia node
+    media_download_output: MediaDownloadOutput
+    # Instructions for evaluating output given the input
+    evaluation_instructions: str
+
+class DownloadedMediaEvaluationOutput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    evaluation: Evaluation
+
+class DownloadedMediaEvaluationStrategy(Strategy[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):
+    # Hardcoded values that cannot be overridden by the user
+    _NO_FEEDBACK: Final[str] = 'there is no feedback.'
+
+    def execute(self, input: DownloadedMediaEvaluationInput) -> DownloadedMediaEvaluationOutput:
+        # TODO: Implement evaluation logic for downloaded media
+        return DownloadedMediaEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
+
+class EvaluateDownloadedMedia(Node[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):
+    def __init__(
+        self,
+        strategy: Strategy[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput],
+    ) -> None:
+        super().__init__(strategy)

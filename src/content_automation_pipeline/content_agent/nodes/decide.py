@@ -1,3 +1,5 @@
+from pydantic import BaseModel, ConfigDict
+
 from content_automation_pipeline.content_agent.models.evaluation import (
     Evaluation,
     Grade,
@@ -7,7 +9,17 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-class _Strategy(Strategy[Evaluation, str]):
+class DecisionInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    evaluation: Evaluation
+
+class DecisionOutput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    destination: str
+
+class DecisionStrategy(Strategy[DecisionInput, DecisionOutput]):
     def __init__(
         self,
         pass_node: str,
@@ -16,13 +28,14 @@ class _Strategy(Strategy[Evaluation, str]):
         self._pass_node = pass_node
         self._fail_node = fail_node
 
-    def execute(self, input: Evaluation) -> str:
-        return self._pass_node if input.grade is Grade.PASS else self._fail_node
+    def execute(self, input: DecisionInput) -> DecisionOutput:
+        destination = self._pass_node if input.evaluation.grade is Grade.PASS else self._fail_node
 
-class Decide(Node[Evaluation, str]):
+        return DecisionOutput(destination=destination)
+
+class Decide(Node[DecisionInput, DecisionOutput]):
     def __init__(
         self,
-        pass_node: str,
-        fail_node: str,
+        strategy: Strategy[DecisionInput, DecisionOutput],
     ) -> None:
-        super().__init__(_Strategy(pass_node, fail_node))
+        super().__init__(strategy)
