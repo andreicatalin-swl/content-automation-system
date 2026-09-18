@@ -1,5 +1,7 @@
-from content_automation_pipeline.content_agent.models.evaluation import Evaluation
-from content_automation_pipeline.content_agent.models.grade import Grade
+from content_automation_pipeline.content_agent.models.evaluation import (
+    Evaluation,
+    Grade,
+)
 from content_automation_pipeline.shared.node import Node, Strategy
 from content_automation_pipeline.utilities.logger import create_logger
 

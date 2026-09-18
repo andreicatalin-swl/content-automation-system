@@ -1,17 +1,16 @@
 from pydantic import BaseModel, ConfigDict
 
-from content_automation_pipeline.artifacts.artifact import Artifact
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-class MediaEntry(BaseModel):
+class MediaLink(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
-    audio: Artifact
-    video: Artifact
+    video_link: str
+    audio_link: str
 
-class Media(BaseModel):
+class MediaLinks(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
-    entries: list[MediaEntry]
+    entries: list[MediaLink]
