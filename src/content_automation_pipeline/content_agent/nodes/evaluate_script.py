@@ -1,34 +1,31 @@
 from typing import Final
 
 import openai_codex
-from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.content_agent.models.evaluation import Evaluation
-from content_automation_pipeline.content_agent.models.script import Script
+from content_automation_pipeline.content_agent.models.script_evaluation_input import (
+    ScriptEvaluationInput,
+)
 from content_automation_pipeline.shared.node import Strategy
 from content_automation_pipeline.shared.rate_limited_node import RateLimitedNode
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-class ScriptEvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    script: Script
-    instructions: str
-
 class _Strategy(Strategy[ScriptEvaluationInput, Evaluation]):
     # Hardcoded values that cannot be overridden by the user
     _INSTRUCTION_TEMPLATE: Final[str] = (
-        'Evaluate the script according to the instructions.\n\n'
-        'Instructions: {instructions}\n\n'
-        'Script: {script}'
+        'Evaluate the script according to the evaluation instructions.\n\n'
+        'Generation instructions (for context only): {generation_instructions}\n\n'
+        'Script: {script}\n\n'
+        'Evaluation instructions: {evaluation_instructions}'
     )
 
     def execute(self, input: ScriptEvaluationInput) -> Evaluation:
         instruction = self._INSTRUCTION_TEMPLATE.format(
-            instructions=input.instructions,
+            generation_instructions=input.generation_instructions,
             script=input.script.model_dump_json(),
+            evaluation_instructions=input.evaluation_instructions,
         )
 
         # Use Codex to grade and give feedback on the script

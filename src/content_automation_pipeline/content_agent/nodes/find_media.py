@@ -3,11 +3,13 @@ from typing import Final
 import openai_codex
 from pydantic import BaseModel, ConfigDict
 
+from content_automation_pipeline.content_agent.models.media_finding_input import (
+    MediaFindingInput,
+)
 from content_automation_pipeline.content_agent.models.media_links import (
     MediaLink,
     MediaLinks,
 )
-from content_automation_pipeline.content_agent.models.script import Script
 from content_automation_pipeline.content_agent.tools.youtube_downloader import (
     YoutubeDownloader,
 )
@@ -16,12 +18,6 @@ from content_automation_pipeline.shared.rate_limited_node import RateLimitedNode
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
-
-class MediaFindingInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    script: Script
-    instructions: str
 
 class _SearchQuery(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
