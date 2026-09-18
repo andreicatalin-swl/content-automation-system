@@ -3,8 +3,8 @@ from typing import Final
 import openai_codex
 
 from content_automation_pipeline.content_agent.models.evaluation import Evaluation
-from content_automation_pipeline.content_agent.models.script_evaluation_input import (
-    ScriptEvaluationInput,
+from content_automation_pipeline.content_agent.models.generated_script_evaluation_input import (
+    GeneratedScriptEvaluationInput,
 )
 from content_automation_pipeline.shared.node import Strategy
 from content_automation_pipeline.shared.rate_limited_node import RateLimitedNode
@@ -12,7 +12,7 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-class _Strategy(Strategy[ScriptEvaluationInput, Evaluation]):
+class _Strategy(Strategy[GeneratedScriptEvaluationInput, Evaluation]):
     # Hardcoded values that cannot be overridden by the user
     _INSTRUCTION_TEMPLATE: Final[str] = (
         'Evaluate the script according to the evaluation instructions.\n\n'
@@ -21,7 +21,7 @@ class _Strategy(Strategy[ScriptEvaluationInput, Evaluation]):
         'Evaluation instructions: {evaluation_instructions}'
     )
 
-    def execute(self, input: ScriptEvaluationInput) -> Evaluation:
+    def execute(self, input: GeneratedScriptEvaluationInput) -> Evaluation:
         instruction = self._INSTRUCTION_TEMPLATE.format(
             generation_instructions=input.generation_instructions,
             script=input.script.model_dump_json(),
@@ -43,7 +43,7 @@ class _Strategy(Strategy[ScriptEvaluationInput, Evaluation]):
 
         return Evaluation.model_validate_json(final_response)
 
-class EvaluateScript(RateLimitedNode[ScriptEvaluationInput, Evaluation]):
+class EvaluateGeneratedScript(RateLimitedNode[GeneratedScriptEvaluationInput, Evaluation]):
     def __init__(
         self,
         max_calls: int = RateLimitedNode._DEFAULT_MAX_CALLS,
