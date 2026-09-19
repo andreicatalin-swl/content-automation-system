@@ -5,10 +5,10 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-T = TypeVar('T', contravariant=True)
-U = TypeVar('U', covariant=True)
+T_contra = TypeVar('T_contra', contravariant=True)
+U_co = TypeVar('U_co', covariant=True)
 
-class Executable(Protocol[T, U]):
+class Executable(Protocol[T_contra, U_co]):
     @abstractmethod
-    def __call__(self, input: T) -> U:
+    def __call__(self, input: T_contra) -> U_co:
         ...
