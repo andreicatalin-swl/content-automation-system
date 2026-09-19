@@ -8,7 +8,11 @@ class MediaLink(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     video_link: str
+    video_start_timestamp: float
+    video_duration: float
     audio_link: str
+    audio_start_timestamp: float
+    audio_duration: float
 
 class MediaLinks(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
