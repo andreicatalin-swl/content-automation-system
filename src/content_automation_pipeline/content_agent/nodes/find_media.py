@@ -9,8 +9,7 @@ from content_automation_pipeline.content_agent.models.evaluation import (
 )
 from content_automation_pipeline.content_agent.models.media_links import MediaLinks
 from content_automation_pipeline.content_agent.models.script import Script
-from content_automation_pipeline.shared.node import Node, Strategy
-from content_automation_pipeline.shared.rate_limited_node import RateLimitedNode
+from content_automation_pipeline.shared.abstract_node import AbstractNode
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -26,7 +25,7 @@ class MediaFindingOutput(BaseModel):
 
     media_links: MediaLinks
 
-class MediaFindingStrategy(Strategy[MediaFindingInput, MediaFindingOutput]):
+class FindMedia(AbstractNode[MediaFindingInput, MediaFindingOutput]):
     # Hardcoded values that cannot be overridden by the user
     _INSTRUCTION_TEMPLATE: Final[str] = (
         'Search YouTube for the video and the audio that fit every entry of the script, and give each one '
@@ -55,14 +54,6 @@ class MediaFindingStrategy(Strategy[MediaFindingInput, MediaFindingOutput]):
 
         return MediaFindingOutput(media_links=MediaLinks.model_validate_json(final_response))
 
-class FindMedia(RateLimitedNode[MediaFindingInput, MediaFindingOutput]):
-    def __init__(
-        self,
-        strategy: Strategy[MediaFindingInput, MediaFindingOutput],
-        max_calls: int = RateLimitedNode._DEFAULT_MAX_CALLS,
-    ) -> None:
-        super().__init__(strategy, max_calls)
-
 class FoundMediaEvaluationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -79,16 +70,9 @@ class FoundMediaEvaluationOutput(BaseModel):
     evaluation: Evaluation
 
 # TODO: Implement proper execute(...) method
-class FoundMediaEvaluationStrategy(Strategy[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):
+class EvaluateFoundMedia(AbstractNode[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
     def execute(self, input: FoundMediaEvaluationInput) -> FoundMediaEvaluationOutput:
         return FoundMediaEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
-
-class EvaluateFoundMedia(Node[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):
-    def __init__(
-        self,
-        strategy: Strategy[FoundMediaEvaluationInput, FoundMediaEvaluationOutput],
-    ) -> None:
-        super().__init__(strategy)

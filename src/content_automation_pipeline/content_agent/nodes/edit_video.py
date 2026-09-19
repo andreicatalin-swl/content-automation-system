@@ -15,7 +15,7 @@ from content_automation_pipeline.content_agent.models.evaluation import (
 )
 from content_automation_pipeline.content_agent.models.media_files import MediaFiles
 from content_automation_pipeline.content_agent.models.script import Script
-from content_automation_pipeline.shared.node import Node, Strategy
+from content_automation_pipeline.shared.abstract_node import AbstractNode
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -32,7 +32,7 @@ class VideoEditingOutput(BaseModel):
     video: Artifact
 
 # TODO: Implement proper _run_script(...) method
-class VideoEditingStrategy(Strategy[VideoEditingInput, VideoEditingOutput]):
+class EditVideo(AbstractNode[VideoEditingInput, VideoEditingOutput]):
     def __init__(
         self,
         artifact_manager: ArtifactManager,
@@ -76,13 +76,6 @@ class VideoEditingStrategy(Strategy[VideoEditingInput, VideoEditingOutput]):
 
         return video_path
 
-class EditVideo(Node[VideoEditingInput, VideoEditingOutput]):
-    def __init__(
-        self,
-        strategy: Strategy[VideoEditingInput, VideoEditingOutput],
-    ) -> None:
-        super().__init__(strategy)
-
 class EditedVideoEvaluationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -99,16 +92,9 @@ class EditedVideoEvaluationOutput(BaseModel):
     evaluation: Evaluation
 
 # TODO: Implement proper execute(...) method
-class EditedVideoEvaluationStrategy(Strategy[EditedVideoEvaluationInput, EditedVideoEvaluationOutput]):
+class EvaluateEditedVideo(AbstractNode[EditedVideoEvaluationInput, EditedVideoEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
     def execute(self, input: EditedVideoEvaluationInput) -> EditedVideoEvaluationOutput:
         return EditedVideoEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
-
-class EvaluateEditedVideo(Node[EditedVideoEvaluationInput, EditedVideoEvaluationOutput]):
-    def __init__(
-        self,
-        strategy: Strategy[EditedVideoEvaluationInput, EditedVideoEvaluationOutput],
-    ) -> None:
-        super().__init__(strategy)

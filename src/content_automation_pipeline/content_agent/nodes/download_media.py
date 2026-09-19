@@ -16,8 +16,7 @@ from content_automation_pipeline.content_agent.models.media_links import MediaLi
 from content_automation_pipeline.content_agent.tools.youtube_downloader import (
     YoutubeDownloader,
 )
-from content_automation_pipeline.shared.node import Node, Strategy
-from content_automation_pipeline.shared.rate_limited_node import RateLimitedNode
+from content_automation_pipeline.shared.abstract_node import AbstractNode
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -32,7 +31,7 @@ class MediaDownloadOutput(BaseModel):
 
     media_files: MediaFiles
 
-class MediaDownloadStrategy(Strategy[MediaDownloadInput, MediaDownloadOutput]):
+class DownloadMedia(AbstractNode[MediaDownloadInput, MediaDownloadOutput]):
     def __init__(
         self,
         artifact_manager: ArtifactManager,
@@ -60,14 +59,6 @@ class MediaDownloadStrategy(Strategy[MediaDownloadInput, MediaDownloadOutput]):
 
         return MediaDownloadOutput(media_files=MediaFiles(entries=entries))
 
-class DownloadMedia(RateLimitedNode[MediaDownloadInput, MediaDownloadOutput]):
-    def __init__(
-        self,
-        strategy: Strategy[MediaDownloadInput, MediaDownloadOutput],
-        max_calls: int = RateLimitedNode._DEFAULT_MAX_CALLS,
-    ) -> None:
-        super().__init__(strategy, max_calls)
-
 class DownloadedMediaEvaluationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -84,16 +75,9 @@ class DownloadedMediaEvaluationOutput(BaseModel):
     evaluation: Evaluation
 
 # TODO: Implement proper execute(...) method
-class DownloadedMediaEvaluationStrategy(Strategy[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):
+class EvaluateDownloadedMedia(AbstractNode[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
     def execute(self, input: DownloadedMediaEvaluationInput) -> DownloadedMediaEvaluationOutput:
         return DownloadedMediaEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
-
-class EvaluateDownloadedMedia(Node[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):
-    def __init__(
-        self,
-        strategy: Strategy[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput],
-    ) -> None:
-        super().__init__(strategy)

@@ -6,8 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.content_agent.models.evaluation import Evaluation
 from content_automation_pipeline.content_agent.models.script import Script
-from content_automation_pipeline.shared.node import Node, Strategy
-from content_automation_pipeline.shared.rate_limited_node import RateLimitedNode
+from content_automation_pipeline.shared.abstract_node import AbstractNode
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -22,7 +21,7 @@ class ScriptGenerationOutput(BaseModel):
 
     script: Script
 
-class ScriptGenerationStrategy(Strategy[ScriptGenerationInput, ScriptGenerationOutput]):
+class GenerateScript(AbstractNode[ScriptGenerationInput, ScriptGenerationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _INSTRUCTION_TEMPLATE: Final[str] = (
         'Generate the requested script according to the instructions.\n\n'
@@ -47,14 +46,6 @@ class ScriptGenerationStrategy(Strategy[ScriptGenerationInput, ScriptGenerationO
 
         return ScriptGenerationOutput(script=Script.model_validate_json(final_response))
 
-class GenerateScript(RateLimitedNode[ScriptGenerationInput, ScriptGenerationOutput]):
-    def __init__(
-        self,
-        strategy: Strategy[ScriptGenerationInput, ScriptGenerationOutput],
-        max_calls: int = RateLimitedNode._DEFAULT_MAX_CALLS,
-    ) -> None:
-        super().__init__(strategy, max_calls)
-
 class GeneratedScriptEvaluationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -70,7 +61,7 @@ class GeneratedScriptEvaluationOutput(BaseModel):
 
     evaluation: Evaluation
 
-class GeneratedScriptEvaluationStrategy(Strategy[GeneratedScriptEvaluationInput, GeneratedScriptEvaluationOutput]):
+class EvaluateGeneratedScript(AbstractNode[GeneratedScriptEvaluationInput, GeneratedScriptEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _INSTRUCTION_TEMPLATE: Final[str] = (
         'Evaluate the output of a node given its input, the required output schema, and the evaluation instructions.\n\n'
@@ -104,10 +95,3 @@ class GeneratedScriptEvaluationStrategy(Strategy[GeneratedScriptEvaluationInput,
             raise RuntimeError(message)
 
         return GeneratedScriptEvaluationOutput(evaluation=Evaluation.model_validate_json(final_response))
-
-class EvaluateGeneratedScript(Node[GeneratedScriptEvaluationInput, GeneratedScriptEvaluationOutput]):
-    def __init__(
-        self,
-        strategy: Strategy[GeneratedScriptEvaluationInput, GeneratedScriptEvaluationOutput],
-    ) -> None:
-        super().__init__(strategy)
