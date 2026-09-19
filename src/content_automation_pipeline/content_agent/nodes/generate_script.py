@@ -16,10 +16,16 @@ class ScriptGenerationInput(BaseModel):
 
     instructions: str
 
+    def __repr__(self) -> str:
+        return self.instructions
+
 class ScriptGenerationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     script: Script
+
+    def __repr__(self) -> str:
+        return repr(self.script)
 
 class GenerateScript(AbstractNode[ScriptGenerationInput, ScriptGenerationOutput]):
     # Hardcoded values that cannot be overridden by the user
@@ -56,10 +62,16 @@ class GeneratedScriptEvaluationInput(BaseModel):
     # Instructions for evaluating output given the input
     evaluation_instructions: str
 
+    def __repr__(self) -> str:
+        return f'{self.script_generation_output!r} against {self.evaluation_instructions}'
+
 class GeneratedScriptEvaluationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     evaluation: Evaluation
+
+    def __repr__(self) -> str:
+        return repr(self.evaluation)
 
 class EvaluateGeneratedScript(AbstractNode[GeneratedScriptEvaluationInput, GeneratedScriptEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user

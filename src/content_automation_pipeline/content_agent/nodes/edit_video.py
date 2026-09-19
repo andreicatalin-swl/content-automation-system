@@ -26,10 +26,16 @@ class VideoEditingInput(BaseModel):
     script: Script
     media_files: MediaFiles
 
+    def __repr__(self) -> str:
+        return f'{self.script!r} with {self.media_files!r}'
+
 class VideoEditingOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     video: Artifact
+
+    def __repr__(self) -> str:
+        return self.video.name
 
 # TODO: Implement proper _run_script(...) method
 class EditVideo(AbstractNode[VideoEditingInput, VideoEditingOutput]):
@@ -95,10 +101,16 @@ class EditedVideoEvaluationInput(BaseModel):
     # Instructions for evaluating output given the input
     evaluation_instructions: str
 
+    def __repr__(self) -> str:
+        return f'{self.video_editing_output!r} against {self.evaluation_instructions}'
+
 class EditedVideoEvaluationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     evaluation: Evaluation
+
+    def __repr__(self) -> str:
+        return repr(self.evaluation)
 
 # TODO: Implement proper execute(...) method
 class EvaluateEditedVideo(AbstractNode[EditedVideoEvaluationInput, EditedVideoEvaluationOutput]):

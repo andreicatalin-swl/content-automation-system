@@ -20,10 +20,16 @@ class MediaFindingInput(BaseModel):
     script: Script
     instructions: str
 
+    def __repr__(self) -> str:
+        return f'{self.script!r} with {self.instructions}'
+
 class MediaFindingOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     media_links: MediaLinks
+
+    def __repr__(self) -> str:
+        return repr(self.media_links)
 
 class FindMedia(AbstractNode[MediaFindingInput, MediaFindingOutput]):
     # Hardcoded values that cannot be overridden by the user
@@ -64,10 +70,16 @@ class FoundMediaEvaluationInput(BaseModel):
     # Instructions for evaluating output given the input
     evaluation_instructions: str
 
+    def __repr__(self) -> str:
+        return f'{self.media_finding_output!r} against {self.evaluation_instructions}'
+
 class FoundMediaEvaluationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     evaluation: Evaluation
+
+    def __repr__(self) -> str:
+        return repr(self.evaluation)
 
 # TODO: Implement proper execute(...) method
 class EvaluateFoundMedia(AbstractNode[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):

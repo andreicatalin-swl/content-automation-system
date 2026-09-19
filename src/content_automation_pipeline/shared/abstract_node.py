@@ -11,12 +11,12 @@ U = TypeVar('U')
 
 class AbstractNode(Executable[T, U]):
     def __call__(self, input: T) -> U:
-        message = f'executing node for input={input}'
+        message = f'executing node for input={input!r}'
         _logger.info(message)
 
         result = self.execute(input)
 
-        message = f'finished executing node for input={input}'
+        message = f'finished executing node for input={input!r}'
         _logger.info(message)
 
         return result

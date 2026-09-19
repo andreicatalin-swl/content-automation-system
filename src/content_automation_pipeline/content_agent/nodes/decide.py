@@ -14,10 +14,16 @@ class DecisionInput(BaseModel):
 
     evaluation: Evaluation
 
+    def __repr__(self) -> str:
+        return repr(self.evaluation)
+
 class DecisionOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     destination: str
+
+    def __repr__(self) -> str:
+        return self.destination
 
 class Decide(AbstractNode[DecisionInput, DecisionOutput]):
     def __init__(

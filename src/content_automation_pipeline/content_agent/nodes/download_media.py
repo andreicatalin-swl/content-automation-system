@@ -26,10 +26,16 @@ class MediaDownloadInput(BaseModel):
 
     media_links: MediaLinks
 
+    def __repr__(self) -> str:
+        return repr(self.media_links)
+
 class MediaDownloadOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     media_files: MediaFiles
+
+    def __repr__(self) -> str:
+        return repr(self.media_files)
 
 class DownloadMedia(AbstractNode[MediaDownloadInput, MediaDownloadOutput]):
     def __init__(
@@ -69,10 +75,16 @@ class DownloadedMediaEvaluationInput(BaseModel):
     # Instructions for evaluating output given the input
     evaluation_instructions: str
 
+    def __repr__(self) -> str:
+        return f'{self.media_download_output!r} against {self.evaluation_instructions}'
+
 class DownloadedMediaEvaluationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     evaluation: Evaluation
+
+    def __repr__(self) -> str:
+        return repr(self.evaluation)
 
 # TODO: Implement proper execute(...) method
 class EvaluateDownloadedMedia(AbstractNode[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):

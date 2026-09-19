@@ -11,7 +11,7 @@ class MediaFile(BaseModel):
     audio: Artifact
     video: Artifact
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f'video {self.video.name}, audio {self.audio.name}'
 
 class MediaFiles(BaseModel):
@@ -19,5 +19,5 @@ class MediaFiles(BaseModel):
 
     entries: list[MediaFile]
 
-    def __str__(self) -> str:
+    def __repr__(self) -> str:
         return f'{len(self.entries)} media files'
