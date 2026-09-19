@@ -158,8 +158,7 @@ class FoundMediaEvaluationOutput(BaseModel):
 class FoundMediaEvaluationStrategy(Strategy[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _INSTRUCTION_TEMPLATE: Final[str] = (
-        'Evaluate the output of a node given its input, the required output schema, and the evaluation '
-        'instructions.\n\n'
+        'Evaluate the output of a node given its input, the required output schema, and the evaluation instructions.\n\n'
         'Assign the grade pass when the output is successful in the evaluation, and the grade fail otherwise. '
         'Give feedback that supports the grade.\n\n'
         'Input: {input}\n\n'
