@@ -9,6 +9,9 @@ class ScriptEntry(BaseModel):
 
     line: str
 
+    def __str__(self) -> str:
+        return self.line
+
 class Script(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -17,3 +20,9 @@ class Script(BaseModel):
     title2: str
     subheading: str
     entries: list[ScriptEntry]
+
+    def __str__(self) -> str:
+        return (
+            f'{self.title1} {self.title2} - {self.subheading} '
+            f'by {self.username} with {len(self.entries)} entries'
+        )

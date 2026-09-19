@@ -11,7 +11,13 @@ class MediaFile(BaseModel):
     audio: Artifact
     video: Artifact
 
+    def __str__(self) -> str:
+        return f'video {self.video.name}, audio {self.audio.name}'
+
 class MediaFiles(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     entries: list[MediaFile]
+
+    def __str__(self) -> str:
+        return f'{len(self.entries)} media files'
