@@ -1,3 +1,4 @@
+import json
 from typing import Final
 
 import openai_codex
@@ -72,11 +73,13 @@ class GeneratedScriptEvaluationOutput(BaseModel):
 class GeneratedScriptEvaluationStrategy(Strategy[GeneratedScriptEvaluationInput, GeneratedScriptEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _INSTRUCTION_TEMPLATE: Final[str] = (
-        'Evaluate the output of a node given the input to that node, following the evaluation instructions.\n\n'
+        'Evaluate the output of a node given its input, the required output schema, and the evaluation '
+        'instructions.\n\n'
         'Assign the grade pass when the output is successful in the evaluation, and the grade fail otherwise. '
         'Give feedback that supports the grade.\n\n'
         'Input: {input}\n\n'
         'Output: {output}\n\n'
+        'Output schema: {output_schema}\n\n'
         'Evaluation instructions: {evaluation_instructions}'
     )
 
@@ -84,6 +87,7 @@ class GeneratedScriptEvaluationStrategy(Strategy[GeneratedScriptEvaluationInput,
         instruction = self._INSTRUCTION_TEMPLATE.format(
             input=input.script_generation_input.model_dump_json(),
             output=input.script_generation_output.model_dump_json(),
+            output_schema=json.dumps(ScriptGenerationOutput.model_json_schema()),
             evaluation_instructions=input.evaluation_instructions,
         )
 

@@ -1,3 +1,4 @@
+import json
 import subprocess
 import uuid
 from collections.abc import Callable
@@ -7,14 +8,12 @@ from tempfile import TemporaryDirectory
 from typing import Final
 
 import imageio_ffmpeg  # type: ignore
+import openai_codex
 from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
-from content_automation_pipeline.content_agent.models.evaluation import (
-    Evaluation,
-    Grade,
-)
+from content_automation_pipeline.content_agent.models.evaluation import Evaluation
 from content_automation_pipeline.content_agent.models.media_files import (
     MediaFile,
     MediaFiles,
@@ -122,13 +121,41 @@ class DownloadedMediaEvaluationOutput(BaseModel):
 
     evaluation: Evaluation
 
-# TODO: Implement proper execute(...) method
 class DownloadedMediaEvaluationStrategy(Strategy[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
-    _NO_FEEDBACK: Final[str] = 'there is no feedback.'
+    _INSTRUCTION_TEMPLATE: Final[str] = (
+        'Evaluate the output of a node given its input, the required output schema, and the evaluation '
+        'instructions.\n\n'
+        'Assign the grade pass when the output is successful in the evaluation, and the grade fail otherwise. '
+        'Give feedback that supports the grade.\n\n'
+        'Input: {input}\n\n'
+        'Output: {output}\n\n'
+        'Output schema: {output_schema}\n\n'
+        'Evaluation instructions: {evaluation_instructions}'
+    )
 
     def execute(self, input: DownloadedMediaEvaluationInput) -> DownloadedMediaEvaluationOutput:
-        return DownloadedMediaEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
+        instruction = self._INSTRUCTION_TEMPLATE.format(
+            input=input.media_download_input.model_dump_json(),
+            output=input.media_download_output.model_dump_json(),
+            output_schema=json.dumps(MediaDownloadOutput.model_json_schema()),
+            evaluation_instructions=input.evaluation_instructions,
+        )
+
+        # Use Codex to grade and give feedback on the media files
+        with openai_codex.Codex() as codex:
+            thread = codex.thread_start(sandbox=openai_codex.Sandbox.read_only)
+            result = thread.run(instruction, output_schema=Evaluation.model_json_schema())
+
+        final_response = result.final_response
+
+        # Narrow to str
+        if final_response is None:
+            message = 'did not return a response'
+            _logger.error(message)
+            raise RuntimeError(message)
+
+        return DownloadedMediaEvaluationOutput(evaluation=Evaluation.model_validate_json(final_response))
 
 class EvaluateDownloadedMedia(Node[DownloadedMediaEvaluationInput, DownloadedMediaEvaluationOutput]):
     def __init__(
