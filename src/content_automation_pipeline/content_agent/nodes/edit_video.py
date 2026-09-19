@@ -68,11 +68,20 @@ class EditVideo(AbstractNode[VideoEditingInput, VideoEditingOutput]):
             ],
         }
 
-        subprocess.run(
+        result = subprocess.run(
             ['node', str(script_path), json.dumps(payload), video_path.as_posix()],
-            check=True,
+            check=False,
             capture_output=True,
+            text=True,
         )
+
+        if result.returncode:
+            message = (
+                f'the editing script exited with code {result.returncode}\n'
+                f'{result.stderr.strip()}'
+            )
+            _logger.error(message)
+            raise RuntimeError(message)
 
         return video_path
 

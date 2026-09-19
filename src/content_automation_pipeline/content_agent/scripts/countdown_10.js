@@ -81,9 +81,15 @@ async function sendAndWait(core, specifier, body, timeoutMs) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
         let matched = null;
+        // A throw inside this callback unwinds through the addon's native frames and takes the
+        // whole process down, so nothing in here is allowed to fail
         core.esdPumpSession((reason, message) => {
-            if (message.serialNumber === sent.serialNumber) {
-                matched = { reason, message };
+            try {
+                if (message && message.serialNumber === sent.serialNumber) {
+                    matched = { reason, message };
+                }
+            } catch (error) {
+                // The message was not one we can read, so it cannot be the response we want
             }
         });
 
