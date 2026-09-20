@@ -5,6 +5,10 @@ from langgraph.graph.state import CompiledStateGraph  # type: ignore
 
 from content_automation_pipeline.artifacts.artifact import Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
+from content_automation_pipeline.countdown_agent.models.evaluation import (
+    Evaluation,
+    Grade,
+)
 from content_automation_pipeline.countdown_agent.nodes.decide import (
     Decide,
     DecisionInput,
@@ -47,13 +51,13 @@ _logger = create_logger(__name__)
 
 T = TypeVar('T')
 
-class ManualGraph:
+class Automatic:
     # Default values that can be overridden by the user
     _KIND: Final[Kind] = Kind.TEMPORARY
     _MAX_CALLS: Final[int] = 1
-    _USERNAME: Final[str] = '@aslo999'
 
     # Hardcoded values that cannot be overridden by the user
+    _FEEDBACK_MARKER: Final[str] = 'Feedback from attempt'
     _GENERATE_SCRIPT_NODE: Final[str] = 'generate_script'
     _EVALUATE_GENERATED_SCRIPT_NODE: Final[str] = 'evaluate_generated_script'
     _FIND_MEDIA_NODE: Final[str] = 'find_media'
@@ -62,22 +66,6 @@ class ManualGraph:
     _EVALUATE_DOWNLOADED_MEDIA_NODE: Final[str] = 'evaluate_downloaded_media'
     _EDIT_VIDEO_NODE: Final[str] = 'edit_video'
     _EVALUATE_EDITED_VIDEO_NODE: Final[str] = 'evaluate_edited_video'
-    _SCRIPT_TEMPLATE: Final[str] = (
-        'Every field of the script has already been decided. Answer with exactly these values and change '
-        'nothing about them. Copy each one character for character, and do not reword it, shorten it, '
-        'improve it, reorder it or add anything of your own.\n\n'
-        'username: {username}\n'
-        'title1: {title1}\n'
-        'title2: {title2}\n'
-        'subheading: {subheading}\n\n'
-        'The entries, in this exact order, one per line:\n\n{entries}'
-    )
-    _MEDIA_TEMPLATE: Final[str] = (
-        'Every link, start timestamp and duration has already been decided. Answer with exactly these '
-        'values and change nothing about them. Do not search for anything, do not look for a better '
-        'video, and do not adjust a timestamp or a duration.\n\n'
-        'One entry for every entry of the script, in this exact order:\n\n{entries}'
-    )
 
     def __init__(
         self,
@@ -85,21 +73,6 @@ class ManualGraph:
         download_media_category: str,
         edit_video_artifact_manager: ArtifactManager,
         edit_video_category: str,
-        title1: str,
-        title2: str,
-        subheading: str,
-        entries: list[str],
-        video_links: list[str],
-        video_start_timestamps: list[float],
-        video_durations: list[float],
-        audio_links: list[str],
-        audio_start_timestamps: list[float],
-        audio_durations: list[float],
-        script_evaluation_instructions: str,
-        found_media_evaluation_instructions: str,
-        downloaded_media_evaluation_instructions: str,
-        edited_video_evaluation_instructions: str,
-        username: str = _USERNAME,
         download_media_kind: Kind = _KIND,
         edit_video_kind: Kind = _KIND,
         generate_script_max_calls: int = _MAX_CALLS,
@@ -107,30 +80,9 @@ class ManualGraph:
         download_media_max_calls: int = _MAX_CALLS,
         edit_video_max_calls: int = _MAX_CALLS,
     ) -> None:
-        message = 'building the manual countdown graph'
+        message = 'building the content graph'
         _logger.info(message)
-
-        self._generation_instructions = self._script_instructions(
-            username,
-            title1,
-            title2,
-            subheading,
-            entries,
-        )
-        self._media_finding_instructions = self._media_instructions(
-            len(entries),
-            video_links,
-            video_start_timestamps,
-            video_durations,
-            audio_links,
-            audio_start_timestamps,
-            audio_durations,
-        )
-        self._script_evaluation_instructions = script_evaluation_instructions
-        self._found_media_evaluation_instructions = found_media_evaluation_instructions
-        self._downloaded_media_evaluation_instructions = downloaded_media_evaluation_instructions
-        self._edited_video_evaluation_instructions = edited_video_evaluation_instructions
-
+        
         self._generate_script = RateLimitingNodeDecorator(GenerateScript(), generate_script_max_calls)
         self._evaluate_generated_script = EvaluateGeneratedScript()
         self._find_media = RateLimitingNodeDecorator(FindMedia(), find_media_max_calls)
@@ -192,27 +144,27 @@ class ManualGraph:
 
         self._compiled_state_graph: CompiledStateGraph[State, None, State, State] = graph.compile()  # type: ignore
 
-        message = 'finished building the manual countdown graph'
+        message = 'finished building the content graph'
         _logger.info(message)
 
     def get_compiled_state_graph(self) -> CompiledStateGraph[State, None, State, State]:
         return self._compiled_state_graph
 
     def _run_generate_script(self, state: State) -> dict[str, Any]:
-        output = self._generate_script(self._script_generation_input())
+        output = self._generate_script(self._script_generation_input(state))
 
         return {'script': output.script}
 
     def _run_evaluate_generated_script(self, state: State) -> dict[str, Any]:
         output = self._evaluate_generated_script(
             GeneratedScriptEvaluationInput(
-                script_generation_input=self._script_generation_input(),
+                script_generation_input=self._script_generation_input(state),
                 script_generation_output=ScriptGenerationOutput(script=self._require(state.script, 'script')),
-                evaluation_instructions=self._script_evaluation_instructions,
+                evaluation_instructions=state.script_evaluation_instructions,
             ),
         )
 
-        return {'evaluation': output.evaluation}
+        return self._update(state, 'generation_instructions', output.evaluation)
 
     def _run_find_media(self, state: State) -> dict[str, Any]:
         output = self._find_media(self._media_finding_input(state))
@@ -226,11 +178,11 @@ class ManualGraph:
                 media_finding_output=MediaFindingOutput(
                     media_links=self._require(state.media_links, 'media links'),
                 ),
-                evaluation_instructions=self._found_media_evaluation_instructions,
+                evaluation_instructions=state.found_media_evaluation_instructions,
             ),
         )
 
-        return {'evaluation': output.evaluation}
+        return self._update(state, 'media_finding_instructions', output.evaluation)
 
     def _run_download_media(self, state: State) -> dict[str, Any]:
         output = self._download_media(self._media_download_input(state))
@@ -244,7 +196,7 @@ class ManualGraph:
                 media_download_output=MediaDownloadOutput(
                     media_files=self._require(state.media_files, 'media files'),
                 ),
-                evaluation_instructions=self._downloaded_media_evaluation_instructions,
+                evaluation_instructions=state.downloaded_media_evaluation_instructions,
             ),
         )
 
@@ -260,7 +212,7 @@ class ManualGraph:
             EditedVideoEvaluationInput(
                 video_editing_input=self._video_editing_input(state),
                 video_editing_output=VideoEditingOutput(video=self._require(state.video, 'video')),
-                evaluation_instructions=self._edited_video_evaluation_instructions,
+                evaluation_instructions=state.edited_video_evaluation_instructions,
             ),
         )
 
@@ -278,81 +230,46 @@ class ManualGraph:
     def _decide_edited_video_destination(self, state: State) -> str:
         return self._decide_on_edited_video(self._decision_input(state)).destination
 
-    def _script_generation_input(self) -> ScriptGenerationInput:
-        return ScriptGenerationInput(instructions=self._generation_instructions)
+    @staticmethod
+    def _update(state: State, instructions_field: str, evaluation: Evaluation) -> dict[str, Any]:
+        update: dict[str, Any] = {'evaluation': evaluation}
 
-    def _media_finding_input(self, state: State) -> MediaFindingInput:
+        # A failed stage runs again from its instructions alone, so the feedback is stacked onto them
+        if evaluation.grade is Grade.FAIL:
+            instructions: str = getattr(state, instructions_field)
+            attempt = instructions.count(Automatic._FEEDBACK_MARKER) + 1
+            update[instructions_field] = (
+                f'{instructions}\n\n'
+                f'{Automatic._FEEDBACK_MARKER} {attempt}, which failed: {evaluation.feedback}'
+            )
+
+        return update
+
+    @staticmethod
+    def _script_generation_input(state: State) -> ScriptGenerationInput:
+        return ScriptGenerationInput(instructions=state.generation_instructions)
+
+    @staticmethod
+    def _media_finding_input(state: State) -> MediaFindingInput:
         return MediaFindingInput(
-            script=self._require(state.script, 'script'),
-            instructions=self._media_finding_instructions,
+            script=Automatic._require(state.script, 'script'),
+            instructions=state.media_finding_instructions,
         )
-
-    @classmethod
-    def _script_instructions(
-        cls,
-        username: str,
-        title1: str,
-        title2: str,
-        subheading: str,
-        entries: list[str],
-    ) -> str:
-        return cls._SCRIPT_TEMPLATE.format(
-            username=username,
-            title1=title1,
-            title2=title2,
-            subheading=subheading,
-            entries='\n'.join(entries),
-        )
-
-    @classmethod
-    def _media_instructions(
-        cls,
-        entries: int,
-        video_links: list[str],
-        video_start_timestamps: list[float],
-        video_durations: list[float],
-        audio_links: list[str],
-        audio_start_timestamps: list[float],
-        audio_durations: list[float],
-    ) -> str:
-        columns: dict[str, list[str] | list[float]] = {
-            'video_link': video_links,
-            'video_start_timestamp': video_start_timestamps,
-            'video_duration': video_durations,
-            'audio_link': audio_links,
-            'audio_start_timestamp': audio_start_timestamps,
-            'audio_duration': audio_durations,
-        }
-
-        # Every column has to line up with the entries, or the answer would be built from ragged rows
-        for name, column in columns.items():
-            if len(column) != entries:
-                message = f'there are {len(column)} values for {name} and {entries} entries'
-                _logger.error(message)
-                raise ValueError(message)
-
-        blocks: list[str] = []
-
-        for index in range(entries):
-            values = '\n'.join(f'    {name}: {column[index]}' for name, column in columns.items())
-            blocks.append(f'  Entry {index + 1}\n{values}')
-
-        return cls._MEDIA_TEMPLATE.format(entries='\n\n'.join(blocks))
 
     @staticmethod
     def _media_download_input(state: State) -> MediaDownloadInput:
-        return MediaDownloadInput(media_links=ManualGraph._require(state.media_links, 'media links'))
+        return MediaDownloadInput(media_links=Automatic._require(state.media_links, 'media links'))
 
     @staticmethod
     def _video_editing_input(state: State) -> VideoEditingInput:
         return VideoEditingInput(
-            script=ManualGraph._require(state.script, 'script'),
-            media_files=ManualGraph._require(state.media_files, 'media files'),
+            script=Automatic._require(state.script, 'script'),
+            media_files=Automatic._require(state.media_files, 'media files'),
         )
 
     @staticmethod
     def _decision_input(state: State) -> DecisionInput:
-        return DecisionInput(evaluation=ManualGraph._require(state.evaluation, 'evaluation'))
+        return DecisionInput(evaluation=Automatic._require(state.evaluation, 'evaluation'))
 
     @staticmethod
     def _require(value: T | None, name: str) -> T:
