@@ -5,6 +5,10 @@ from langgraph.graph.state import CompiledStateGraph  # type: ignore
 
 from content_automation_pipeline.artifacts.artifact import Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
+from content_automation_pipeline.countdown_agent.models.evaluation import (
+    Evaluation,
+    Grade,
+)
 from content_automation_pipeline.countdown_agent.nodes.decide import (
     Decide,
     DecisionInput,
@@ -53,6 +57,7 @@ class Graph:
     _MAX_CALLS: Final[int] = 1
 
     # Hardcoded values that cannot be overridden by the user
+    _FEEDBACK_MARKER: Final[str] = 'Feedback from attempt'
     _GENERATE_SCRIPT_NODE: Final[str] = 'generate_script'
     _EVALUATE_GENERATED_SCRIPT_NODE: Final[str] = 'evaluate_generated_script'
     _FIND_MEDIA_NODE: Final[str] = 'find_media'
@@ -159,7 +164,7 @@ class Graph:
             ),
         )
 
-        return {'evaluation': output.evaluation}
+        return self._update(state, 'generation_instructions', output.evaluation)
 
     def _run_find_media(self, state: State) -> dict[str, Any]:
         output = self._find_media(self._media_finding_input(state))
@@ -177,7 +182,7 @@ class Graph:
             ),
         )
 
-        return {'evaluation': output.evaluation}
+        return self._update(state, 'media_finding_instructions', output.evaluation)
 
     def _run_download_media(self, state: State) -> dict[str, Any]:
         output = self._download_media(self._media_download_input(state))
@@ -224,6 +229,21 @@ class Graph:
 
     def _decide_edited_video_destination(self, state: State) -> str:
         return self._decide_on_edited_video(self._decision_input(state)).destination
+
+    @staticmethod
+    def _update(state: State, instructions_field: str, evaluation: Evaluation) -> dict[str, Any]:
+        update: dict[str, Any] = {'evaluation': evaluation}
+
+        # A failed stage runs again from its instructions alone, so the feedback is stacked onto them
+        if evaluation.grade is Grade.FAIL:
+            instructions: str = getattr(state, instructions_field)
+            attempt = instructions.count(Graph._FEEDBACK_MARKER) + 1
+            update[instructions_field] = (
+                f'{instructions}\n\n'
+                f'{Graph._FEEDBACK_MARKER} {attempt}, which failed: {evaluation.feedback}'
+            )
+
+        return update
 
     @staticmethod
     def _script_generation_input(state: State) -> ScriptGenerationInput:
