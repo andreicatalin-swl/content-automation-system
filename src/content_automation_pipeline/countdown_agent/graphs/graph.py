@@ -64,27 +64,33 @@ class Graph:
 
     def __init__(
         self,
-        artifact_manager: ArtifactManager,
-        category: str,
-        kind: Kind = _KIND,
-        max_script_generations: int = _MAX_CALLS,
-        max_media_findings: int = _MAX_CALLS,
-        max_media_downloads: int = _MAX_CALLS,
-        max_video_edits: int = _MAX_CALLS,
+        download_media_artifact_manager: ArtifactManager,
+        download_media_category: str,
+        edit_video_artifact_manager: ArtifactManager,
+        edit_video_category: str,
+        download_media_kind: Kind = _KIND,
+        edit_video_kind: Kind = _KIND,
+        generate_script_max_calls: int = _MAX_CALLS,
+        find_media_max_calls: int = _MAX_CALLS,
+        download_media_max_calls: int = _MAX_CALLS,
+        edit_video_max_calls: int = _MAX_CALLS,
     ) -> None:
         message = 'building the content graph'
         _logger.info(message)
         
-        self._generate_script = RateLimitingNodeDecorator(GenerateScript(), max_script_generations)
+        self._generate_script = RateLimitingNodeDecorator(GenerateScript(), generate_script_max_calls)
         self._evaluate_generated_script = EvaluateGeneratedScript()
-        self._find_media = RateLimitingNodeDecorator(FindMedia(), max_media_findings)
+        self._find_media = RateLimitingNodeDecorator(FindMedia(), find_media_max_calls)
         self._evaluate_found_media = EvaluateFoundMedia()
         self._download_media = RateLimitingNodeDecorator(
-            DownloadMedia(artifact_manager, category, kind),
-            max_media_downloads,
+            DownloadMedia(download_media_artifact_manager, download_media_category, download_media_kind),
+            download_media_max_calls,
         )
         self._evaluate_downloaded_media = EvaluateDownloadedMedia()
-        self._edit_video = RateLimitingNodeDecorator(EditVideo(artifact_manager, category, kind), max_video_edits)
+        self._edit_video = RateLimitingNodeDecorator(
+            EditVideo(edit_video_artifact_manager, edit_video_category, edit_video_kind),
+            edit_video_max_calls,
+        )
         self._evaluate_edited_video = EvaluateEditedVideo()
 
         self._decide_on_script = Decide(self._FIND_MEDIA_NODE, self._GENERATE_SCRIPT_NODE)

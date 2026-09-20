@@ -23,6 +23,8 @@ const AUDIO_TRACK_INDEX = 0; // A1
 const MOGRT_TRACK_INDEX = 2; // V3
 const WORK_AREA_ENTIRE_SEQUENCE = 0;
 
+const PREMIERE_IMAGE_NAME = 'Adobe Premiere Pro.exe';
+
 const CONNECT_TIMEOUT_MS = 5 * 60 * 1000;
 const PROJECT_LOAD_TIMEOUT_MS = 10 * 60 * 1000;
 const EVAL_TIMEOUT_MS = 2 * 60 * 1000;
@@ -32,6 +34,8 @@ const PROBE_INTERVAL_MS = 2000;
 // Premiere refuses connections while it boots, and probing it before it is ready has been seen
 // to take the bridge down, so the first probe waits this long after the template is opened
 const SETTLE_MS = 30 * 1000;
+// Premiere takes a moment to actually disappear after it is killed
+const SHUTDOWN_MS = 5 * 1000;
 
 function log(message) {
     process.stderr.write(`[edit_video] ${message}\n`);
@@ -316,6 +320,14 @@ function jsxExport(outputPath, presetPath) {
 
 // Premiere's documented /C es.processFile launch flag is unreliable, so the project is opened
 // through its file association instead
+// A previous run leaves Premiere holding its own copy of the project, and opening the template on
+// top of that raises a save prompt that nothing here can answer, so every run starts from no Premiere
+function closePremiere() {
+    return new Promise((resolve) => {
+        execFile('taskkill', ['/F', '/T', '/IM', PREMIERE_IMAGE_NAME], () => resolve());
+    });
+}
+
 function openTemplate() {
     return new Promise((resolve, reject) => {
         execFile('cmd', ['/c', 'start', '', TEMPLATE_PATH], (error) => (error ? reject(error) : resolve()));
@@ -406,6 +418,11 @@ async function main() {
 
     try {
         const specifier = findPremiereSpecifier(core);
+
+        log(`closing any running ${PREMIERE_IMAGE_NAME}`);
+        await closePremiere();
+        await sleep(SHUTDOWN_MS);
+
         log(`opening the template in ${specifier}`);
         await openTemplate();
 
