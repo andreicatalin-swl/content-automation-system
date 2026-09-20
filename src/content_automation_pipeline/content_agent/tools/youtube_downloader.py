@@ -50,7 +50,6 @@ class YoutubeDownloader:
         options: dict[str, Any] = {
             'format': self._VIDEO_FORMAT,
             'merge_output_format': self._VIDEO_EXTENSION,
-            'force_keyframes_at_cuts': True,
         }
         return self._download(url, self._VIDEO_EXTENSION, start_timestamp, duration, options)
 
@@ -104,6 +103,9 @@ class YoutubeDownloader:
                     'file_access_retries': self._RETRIES,
                     # Only the section this callback returns is downloaded
                     'download_ranges': ranges,
+                    # Without this the section is copied, and the cut lands on the nearest packet
+                    # boundary instead of the timestamp that was asked for
+                    'force_keyframes_at_cuts': True,
                     **self._runtime_options(),
                     **options,
                 }

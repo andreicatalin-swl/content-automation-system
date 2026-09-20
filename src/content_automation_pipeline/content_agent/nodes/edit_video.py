@@ -62,20 +62,20 @@ class EditVideo(AbstractNode[VideoEditingInput, VideoEditingOutput]):
         script_path = Path(__file__).parent.parent / 'scripts' / 'countdown_10.js'
         video_path = Path(mkdtemp()) / f'{uuid.uuid4().hex}.mp4'
 
-        # The script only understands real file paths, so resolve every artifact before handing it over
+        # Premiere relinks and exports through native paths, so a posix path silently fails there
         payload: dict[str, Any] = {
             'script': input.script.model_dump(),
             'media_files': [
                 {
-                    'audio': self._artifact_manager.path(entry.audio).as_posix(),
-                    'video': self._artifact_manager.path(entry.video).as_posix(),
+                    'audio': str(self._artifact_manager.path(entry.audio)),
+                    'video': str(self._artifact_manager.path(entry.video)),
                 }
                 for entry in input.media_files.entries
             ],
         }
 
         result = subprocess.run(
-            ['node', str(script_path), json.dumps(payload), video_path.as_posix()],
+            ['node', str(script_path), json.dumps(payload), str(video_path)],
             check=False,
             capture_output=True,
             text=True,

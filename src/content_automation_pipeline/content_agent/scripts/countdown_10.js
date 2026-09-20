@@ -4,7 +4,7 @@
 //
 // Usage: node countdown_10.js '<payload json>' '<output video path>'
 //   payload.script      : { username, title1, title2, subheading, entries: [{ line }] }
-//   payload.media_files : [{ audio, video }]  (absolute paths, forward slashes)
+//   payload.media_files : [{ audio, video }]  (absolute native paths, backslashes on Windows)
 //
 // Every edit runs as ExtendScript inside Premiere over the ExtendScript Debugger's native bridge,
 // so Premiere renders the export itself and no Adobe Media Encoder install is needed.
@@ -29,6 +29,9 @@ const EVAL_TIMEOUT_MS = 2 * 60 * 1000;
 const EXPORT_TIMEOUT_MS = 60 * 60 * 1000;
 const POLL_INTERVAL_MS = 50;
 const PROBE_INTERVAL_MS = 2000;
+// Premiere refuses connections while it boots, and probing it before it is ready has been seen
+// to take the bridge down, so the first probe waits this long after the template is opened
+const SETTLE_MS = 30 * 1000;
 
 function log(message) {
     process.stderr.write(`[edit_video] ${message}\n`);
@@ -109,8 +112,12 @@ async function sendAndWait(core, specifier, body, timeoutMs) {
 // The engine name differs per app and version, so it is read off the connect response
 async function connect(core, specifier) {
     const deadline = Date.now() + CONNECT_TIMEOUT_MS;
+    let attempt = 0;
 
     while (Date.now() < deadline) {
+        attempt += 1;
+        log(`connect attempt ${attempt}`);
+
         try {
             const body = await sendAndWait(core, specifier, '<connect/>', PROBE_INTERVAL_MS);
             const match = /<engine\s+name="([^"]+)"/.exec(body);
@@ -118,7 +125,7 @@ async function connect(core, specifier) {
                 return match[1];
             }
         } catch (error) {
-            // Premiere is not accepting connections yet
+            log(`connect attempt ${attempt} did not land: ${error.message}`);
         }
 
         await sleep(PROBE_INTERVAL_MS);
@@ -401,6 +408,9 @@ async function main() {
         const specifier = findPremiereSpecifier(core);
         log(`opening the template in ${specifier}`);
         await openTemplate();
+
+        log(`waiting ${SETTLE_MS / 1000}s for ${specifier} to accept connections`);
+        await sleep(SETTLE_MS);
 
         const engine = await connect(core, specifier);
         log(`connected to the ${engine} engine`);
