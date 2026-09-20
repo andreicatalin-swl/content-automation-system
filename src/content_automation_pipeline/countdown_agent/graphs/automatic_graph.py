@@ -51,7 +51,7 @@ _logger = create_logger(__name__)
 
 T = TypeVar('T')
 
-class Graph:
+class AutomaticGraph:
     # Default values that can be overridden by the user
     _KIND: Final[Kind] = Kind.TEMPORARY
     _MAX_CALLS: Final[int] = 1
@@ -237,10 +237,10 @@ class Graph:
         # A failed stage runs again from its instructions alone, so the feedback is stacked onto them
         if evaluation.grade is Grade.FAIL:
             instructions: str = getattr(state, instructions_field)
-            attempt = instructions.count(Graph._FEEDBACK_MARKER) + 1
+            attempt = instructions.count(AutomaticGraph._FEEDBACK_MARKER) + 1
             update[instructions_field] = (
                 f'{instructions}\n\n'
-                f'{Graph._FEEDBACK_MARKER} {attempt}, which failed: {evaluation.feedback}'
+                f'{AutomaticGraph._FEEDBACK_MARKER} {attempt}, which failed: {evaluation.feedback}'
             )
 
         return update
@@ -252,24 +252,24 @@ class Graph:
     @staticmethod
     def _media_finding_input(state: State) -> MediaFindingInput:
         return MediaFindingInput(
-            script=Graph._require(state.script, 'script'),
+            script=AutomaticGraph._require(state.script, 'script'),
             instructions=state.media_finding_instructions,
         )
 
     @staticmethod
     def _media_download_input(state: State) -> MediaDownloadInput:
-        return MediaDownloadInput(media_links=Graph._require(state.media_links, 'media links'))
+        return MediaDownloadInput(media_links=AutomaticGraph._require(state.media_links, 'media links'))
 
     @staticmethod
     def _video_editing_input(state: State) -> VideoEditingInput:
         return VideoEditingInput(
-            script=Graph._require(state.script, 'script'),
-            media_files=Graph._require(state.media_files, 'media files'),
+            script=AutomaticGraph._require(state.script, 'script'),
+            media_files=AutomaticGraph._require(state.media_files, 'media files'),
         )
 
     @staticmethod
     def _decision_input(state: State) -> DecisionInput:
-        return DecisionInput(evaluation=Graph._require(state.evaluation, 'evaluation'))
+        return DecisionInput(evaluation=AutomaticGraph._require(state.evaluation, 'evaluation'))
 
     @staticmethod
     def _require(value: T | None, name: str) -> T:
