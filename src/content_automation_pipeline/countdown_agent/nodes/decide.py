@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
-from content_automation_pipeline.content_agent.models.evaluation import (
+from content_automation_pipeline.countdown_agent.models.evaluation import (
     Evaluation,
     Grade,
 )

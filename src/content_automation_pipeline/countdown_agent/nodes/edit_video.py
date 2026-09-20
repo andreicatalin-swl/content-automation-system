@@ -9,12 +9,12 @@ from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
-from content_automation_pipeline.content_agent.models.evaluation import (
+from content_automation_pipeline.countdown_agent.models.evaluation import (
     Evaluation,
     Grade,
 )
-from content_automation_pipeline.content_agent.models.media_files import MediaFiles
-from content_automation_pipeline.content_agent.models.script import Script
+from content_automation_pipeline.countdown_agent.models.media_files import MediaFiles
+from content_automation_pipeline.countdown_agent.models.script import Script
 from content_automation_pipeline.shared.abstract_node import AbstractNode
 from content_automation_pipeline.utilities.logger import create_logger
 
