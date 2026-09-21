@@ -12,6 +12,9 @@ class ArtifactManager:
     def __init__(self, root: Path) -> None:
         self._root = root.resolve()
 
+    def __repr__(self) -> str:
+        return str(self._root)
+
     def path(self, artifact: Artifact) -> Path:
         # Construct the path for the artifact
         path = (

@@ -16,3 +16,6 @@ class Artifact(BaseModel):
     kind: Kind
     category: str
     name: str
+
+    def __repr__(self) -> str:
+        return f'{self.kind}/{self.category}/{self.name}'
