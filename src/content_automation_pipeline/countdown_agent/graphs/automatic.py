@@ -41,10 +41,10 @@ from content_automation_pipeline.countdown_agent.nodes.generate_script import (
     ScriptGenerationInput,
     ScriptGenerationOutput,
 )
-from content_automation_pipeline.countdown_agent.nodes.rate_limiting_node_decorator import (
+from content_automation_pipeline.countdown_agent.states.state import State
+from content_automation_pipeline.shared.rate_limiting_node_decorator import (
     RateLimitingNodeDecorator,
 )
-from content_automation_pipeline.countdown_agent.states.state import State
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
