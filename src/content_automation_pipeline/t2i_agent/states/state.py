@@ -9,7 +9,7 @@ _logger = create_logger(__name__)
 class State(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True, validate_assignment=True)
 
-    prompt: str
+    generation_instructions: str
     evaluation_instructions: str
     feedback: list[str] = []
     image: Artifact | None = None

@@ -75,16 +75,18 @@ class Graph:
         return self._compiled_state_graph
 
     def _run_generate(self, state: State) -> dict[str, Any]:
-        output = self._generate(GenerationInput(prompt=state.prompt, feedback=state.feedback))
+        output = self._generate(
+            GenerationInput(instructions=state.generation_instructions, feedback=state.feedback),
+        )
 
         return {'image': output.image}
 
     def _run_evaluate(self, state: State) -> dict[str, Any]:
         output = self._evaluate(
             EvaluationInput(
-                generation_input=GenerationInput(prompt=state.prompt, feedback=state.feedback),
+                generation_input=GenerationInput(instructions=state.generation_instructions, feedback=state.feedback),
                 generation_output=GenerationOutput(image=self._require(state.image, 'image')),
-                evaluation_instructions=state.evaluation_instructions,
+                instructions=state.evaluation_instructions,
             ),
         )
 

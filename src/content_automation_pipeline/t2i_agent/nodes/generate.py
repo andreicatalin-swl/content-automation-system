@@ -17,11 +17,11 @@ _logger = create_logger(__name__)
 class GenerationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
-    prompt: str
+    instructions: str
     feedback: list[str]
 
     def __repr__(self) -> str:
-        return self.prompt
+        return self.instructions
 
 class GenerationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
@@ -33,10 +33,10 @@ class GenerationOutput(BaseModel):
 
 class Generate(AbstractNode[GenerationInput, GenerationOutput]):
     # Hardcoded values that cannot be overridden by the user
-    _INSTRUCTION_TEMPLATE: Final[str] = (
-        'Generate an image using your built-in image generation tool, respecting the prompt and the '
+    _PROMPT_TEMPLATE: Final[str] = (
+        'Generate an image using your built-in image generation tool, respecting the instructions and the '
         'feedback from the previous generations.\n\n'
-        'Prompt: {prompt}\n\n'
+        'Instructions: {instructions}\n\n'
         'Feedback from the previous generations: {feedback}\n\n'
         'Save the image as a PNG file at the following path: {output_path}'
     )
@@ -55,17 +55,17 @@ class Generate(AbstractNode[GenerationInput, GenerationOutput]):
         with TemporaryDirectory() as directory:
             output_path = Path(directory) / f'{uuid.uuid4().hex}.png'
 
-            # Build the instructions for the image generation
-            instruction = self._INSTRUCTION_TEMPLATE.format(
-                prompt=input.prompt,
+            # Build the prompt for the generation
+            prompt = self._PROMPT_TEMPLATE.format(
+                instructions=input.instructions,
                 feedback='\n'.join(input.feedback),
                 output_path=output_path,
             )
 
-            # Use OpenAI Codex to generate the image based on the instructions
+            # Use OpenAI Codex for the generation
             with openai_codex.Codex() as codex:
                 thread = codex.thread_start(cwd=directory, sandbox=openai_codex.Sandbox.workspace_write)
-                thread.run(instruction)
+                thread.run(prompt)
 
             # Create an artifact for the generated image and publish it to the artifact manager
             artifact = Artifact(kind=self._kind, category=self._category, name=output_path.name)
@@ -78,10 +78,10 @@ class EvaluationInput(BaseModel):
 
     generation_input: GenerationInput
     generation_output: GenerationOutput
-    evaluation_instructions: str
+    instructions: str
 
     def __repr__(self) -> str:
-        return f'{self.generation_output!r} against {self.evaluation_instructions}'
+        return f'{self.generation_output!r} against {self.instructions}'
 
 class EvaluationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
@@ -93,14 +93,14 @@ class EvaluationOutput(BaseModel):
 
 class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
-    _INSTRUCTION_TEMPLATE: Final[str] = (
-        'Check the generated image against the prompt and the feedback it had to respect, and evaluate '
-        'it according to the evaluation instructions.\n\n'
+    _PROMPT_TEMPLATE: Final[str] = (
+        'Check the generated image against the generation instructions and the generation feedback it had to '
+        'respect, and evaluate it according to the instructions.\n\n'
         'Assign the grade pass when the image is successful in the evaluation, and the grade fail otherwise. '
         'Give feedback that supports the grade.\n\n'
-        'Prompt: {prompt}\n\n'
-        'Feedback from the previous generations: {feedback}\n\n'
-        'Evaluation instructions: {evaluation_instructions}\n\n'
+        'Generation instructions: {generation_instructions}\n\n'
+        'Generation feedback from the previous attempts: {generation_feedback}\n\n'
+        'Instructions: {instructions}\n\n'
         'Read the image from the following path: {image_path}'
     )
 
@@ -111,18 +111,18 @@ class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
         self._artifact_manager = artifact_manager
 
     def execute(self, input: EvaluationInput) -> EvaluationOutput:
-        # Build the instructions for the evaluation of the generated image
-        instruction = self._INSTRUCTION_TEMPLATE.format(
-            prompt=input.generation_input.prompt,
-            feedback='\n'.join(input.generation_input.feedback),
-            evaluation_instructions=input.evaluation_instructions,
+        # Build the prompt for the evaluation
+        prompt = self._PROMPT_TEMPLATE.format(
+            generation_instructions=input.generation_input.instructions,
+            generation_feedback='\n'.join(input.generation_input.feedback),
+            instructions=input.instructions,
             image_path=self._artifact_manager.path(input.generation_output.image),
         )
 
-        # Use OpenAI Codex to evaluate the generated image based on the instructions
+        # Use OpenAI Codex for the evaluation
         with openai_codex.Codex() as codex:
             thread = codex.thread_start(sandbox=openai_codex.Sandbox.read_only)
-            result = thread.run(instruction, output_schema=Evaluation.model_json_schema())
+            result = thread.run(prompt, output_schema=Evaluation.model_json_schema())
 
         final_response = result.final_response
 
