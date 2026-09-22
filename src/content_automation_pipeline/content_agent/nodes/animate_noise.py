@@ -45,6 +45,7 @@ class NoiseAnimationOutput(BaseModel):
     def __repr__(self) -> str:
         return self.video.name
 
+# TODO: Implement proper execute(...) -> ... method
 class AnimateNoise(AbstractNode[NoiseAnimationInput, NoiseAnimationOutput]):
     def __init__(
         self,

@@ -38,6 +38,7 @@ class FadeAnimationOutput(BaseModel):
     def __repr__(self) -> str:
         return self.video.name
 
+# TODO: Implement proper execute(...) -> ... method
 class AnimateFade(AbstractNode[FadeAnimationInput, FadeAnimationOutput]):
     def __init__(
         self,

@@ -42,6 +42,7 @@ class ParallaxAnimationOutput(BaseModel):
     def __repr__(self) -> str:
         return self.video.name
 
+# TODO: Implement proper execute(...) -> ... method
 class AnimateParallax(AbstractNode[ParallaxAnimationInput, ParallaxAnimationOutput]):
     # Default values that can be overridden by the user
     _MODEL: Final[str] = 'depth-anything/Depth-Anything-V2-Small-hf'
