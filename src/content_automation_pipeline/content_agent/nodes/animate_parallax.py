@@ -24,7 +24,7 @@ _ReadFrames = Callable[..., Iterator[Any]]
 _WriteFrames = Callable[..., Generator[None, bytes | None, None]]
 _Estimate = Callable[..., dict[str, Any]]
 
-class DepthParallaxAnimationInput(BaseModel):
+class ParallaxAnimationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     video: Artifact
@@ -34,7 +34,7 @@ class DepthParallaxAnimationInput(BaseModel):
     def __repr__(self) -> str:
         return f'{self.video!r} displaced by {self.strength} at {self.speed}'
 
-class DepthParallaxAnimationOutput(BaseModel):
+class ParallaxAnimationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
     video: Artifact
@@ -42,7 +42,7 @@ class DepthParallaxAnimationOutput(BaseModel):
     def __repr__(self) -> str:
         return self.video.name
 
-class AnimateDepthParallax(AbstractNode[DepthParallaxAnimationInput, DepthParallaxAnimationOutput]):
+class AnimateParallax(AbstractNode[ParallaxAnimationInput, ParallaxAnimationOutput]):
     # Default values that can be overridden by the user
     _MODEL: Final[str] = 'depth-anything/Depth-Anything-V2-Small-hf'
     _SMOOTHING: Final[float] = 0.2
@@ -61,7 +61,7 @@ class AnimateDepthParallax(AbstractNode[DepthParallaxAnimationInput, DepthParall
         self._model = model
         self._smoothing = smoothing
 
-    def execute(self, input: DepthParallaxAnimationInput) -> DepthParallaxAnimationOutput:
+    def execute(self, input: ParallaxAnimationInput) -> ParallaxAnimationOutput:
         # Open the video and take its size and frame rate
         read_frames: _ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
         reader = read_frames(str(self._artifact_manager.path(input.video)))
@@ -138,5 +138,5 @@ class AnimateDepthParallax(AbstractNode[DepthParallaxAnimationInput, DepthParall
             artifact = Artifact(kind=self._kind, category=self._category, name=output_path.name)
             self._artifact_manager.publish(artifact, output_path, move=True)
 
-        return DepthParallaxAnimationOutput(video=artifact)
+        return ParallaxAnimationOutput(video=artifact)
 
