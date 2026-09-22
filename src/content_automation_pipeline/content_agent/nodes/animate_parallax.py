@@ -15,6 +15,10 @@ from transformers import pipeline
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
+from content_automation_pipeline.content_agent.models.evaluation import (
+    Evaluation,
+    Grade,
+)
 from content_automation_pipeline.shared.abstract_node import AbstractNode
 from content_automation_pipeline.utilities.logger import create_logger
 
@@ -141,3 +145,28 @@ class AnimateParallax(AbstractNode[ParallaxAnimationInput, ParallaxAnimationOutp
 
         return ParallaxAnimationOutput(video=artifact)
 
+class AnimatedParallaxEvaluationInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    parallax_animation_input: ParallaxAnimationInput
+    parallax_animation_output: ParallaxAnimationOutput
+    instructions: str
+
+    def __repr__(self) -> str:
+        return f'{self.parallax_animation_output!r} against {self.instructions}'
+
+class AnimatedParallaxEvaluationOutput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    evaluation: Evaluation
+
+    def __repr__(self) -> str:
+        return repr(self.evaluation)
+
+# TODO: Implement proper execute(...) -> ... method
+class EvaluateAnimatedParallax(AbstractNode[AnimatedParallaxEvaluationInput, AnimatedParallaxEvaluationOutput]):
+    # Hardcoded values that cannot be overridden by the user
+    _NO_FEEDBACK: Final[str] = 'there is no feedback.'
+
+    def execute(self, input: AnimatedParallaxEvaluationInput) -> AnimatedParallaxEvaluationOutput:
+        return AnimatedParallaxEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))

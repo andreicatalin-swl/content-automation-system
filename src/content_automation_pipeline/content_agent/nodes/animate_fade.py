@@ -2,7 +2,7 @@ import uuid
 from collections.abc import Callable, Generator, Iterator
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, Final
 
 import imageio_ffmpeg  # type: ignore
 import numpy as np
@@ -11,6 +11,10 @@ from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
+from content_automation_pipeline.content_agent.models.evaluation import (
+    Evaluation,
+    Grade,
+)
 from content_automation_pipeline.shared.abstract_node import AbstractNode
 from content_automation_pipeline.utilities.logger import create_logger
 
@@ -101,3 +105,29 @@ class AnimateFade(AbstractNode[FadeAnimationInput, FadeAnimationOutput]):
             self._artifact_manager.publish(artifact, output_path, move=True)
 
         return FadeAnimationOutput(video=artifact)
+
+class AnimatedFadeEvaluationInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    fade_animation_input: FadeAnimationInput
+    fade_animation_output: FadeAnimationOutput
+    instructions: str
+
+    def __repr__(self) -> str:
+        return f'{self.fade_animation_output!r} against {self.instructions}'
+
+class AnimatedFadeEvaluationOutput(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+
+    evaluation: Evaluation
+
+    def __repr__(self) -> str:
+        return repr(self.evaluation)
+
+# TODO: Implement proper execute(...) -> ... method
+class EvaluateAnimatedFade(AbstractNode[AnimatedFadeEvaluationInput, AnimatedFadeEvaluationOutput]):
+    # Hardcoded values that cannot be overridden by the user
+    _NO_FEEDBACK: Final[str] = 'there is no feedback.'
+
+    def execute(self, input: AnimatedFadeEvaluationInput) -> AnimatedFadeEvaluationOutput:
+        return AnimatedFadeEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
