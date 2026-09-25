@@ -14,16 +14,13 @@ authors = [
 dependencies = [
     "filelock>=3.0",
     "imageio-ffmpeg>=0.5",
-    "langchain>=1.0",
-    "langchain-anthropic>=1.0",
-    "langchain-core>=1.0",
-    "langchain-groq>=1.0",
     "langgraph>=1.0",
     "numpy>=2.0",
     "openai-codex>=0.147.0",
     "pillow>=11.0",
     "pydantic>=2.0",
     "torch>=2.9",
+    "torchvision>=0.24",
     "transformers>=4.44",
     "yt-dlp>=2024.1",
 ]
