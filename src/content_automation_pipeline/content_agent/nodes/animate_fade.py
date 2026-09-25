@@ -20,9 +20,6 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-_ReadFrames = Callable[..., Iterator[Any]]
-_WriteFrames = Callable[..., Generator[None, bytes | None, None]]
-
 class FadeAnimationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -44,6 +41,9 @@ class FadeAnimationOutput(BaseModel):
 
 # TODO: Implement proper execute(...) -> ... method
 class AnimateFade(AbstractNode[FadeAnimationInput, FadeAnimationOutput]):
+    _ReadFrames = Callable[..., Iterator[Any]]
+    _WriteFrames = Callable[..., Generator[None, bytes | None, None]]
+
     def __init__(
         self,
         artifact_manager: ArtifactManager,
@@ -56,7 +56,7 @@ class AnimateFade(AbstractNode[FadeAnimationInput, FadeAnimationOutput]):
 
     def execute(self, input: FadeAnimationInput) -> FadeAnimationOutput:
         # Open the video and take its size, frame rate and length
-        read_frames: _ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
+        read_frames: AnimateFade._ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
         reader = read_frames(str(self._artifact_manager.path(input.video)))
         meta: dict[str, Any] = next(reader)
         size: tuple[int, int] = meta['size']
@@ -71,7 +71,7 @@ class AnimateFade(AbstractNode[FadeAnimationInput, FadeAnimationOutput]):
 
         with TemporaryDirectory() as directory:
             output_path = Path(directory) / f'{uuid.uuid4().hex}.mp4'
-            write_frames: _WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
+            write_frames: AnimateFade._WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
             writer = write_frames(
                 str(output_path),
                 (width, height),
