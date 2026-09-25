@@ -24,10 +24,6 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-_ReadFrames = Callable[..., Iterator[Any]]
-_WriteFrames = Callable[..., Generator[None, bytes | None, None]]
-_Estimate = Callable[..., dict[str, Any]]
-
 class ParallaxAnimationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -48,6 +44,10 @@ class ParallaxAnimationOutput(BaseModel):
 
 # TODO: Implement proper execute(...) -> ... method
 class AnimateParallax(AbstractNode[ParallaxAnimationInput, ParallaxAnimationOutput]):
+    _ReadFrames = Callable[..., Iterator[Any]]
+    _WriteFrames = Callable[..., Generator[None, bytes | None, None]]
+    _Estimate = Callable[..., dict[str, Any]]
+
     # Default values that can be overridden by the user
     _MODEL: Final[str] = 'depth-anything/Depth-Anything-V2-Small-hf'
     _SMOOTHING: Final[float] = 0.2
@@ -68,7 +68,7 @@ class AnimateParallax(AbstractNode[ParallaxAnimationInput, ParallaxAnimationOutp
 
     def execute(self, input: ParallaxAnimationInput) -> ParallaxAnimationOutput:
         # Open the video and take its size and frame rate
-        read_frames: _ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
+        read_frames: AnimateParallax._ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
         reader = read_frames(str(self._artifact_manager.path(input.video)))
         meta: dict[str, Any] = next(reader)
         size: tuple[int, int] = meta['size']
@@ -80,7 +80,7 @@ class AnimateParallax(AbstractNode[ParallaxAnimationInput, ParallaxAnimationOutp
         message = f'loading {self._model} onto device {device}'
         _logger.info(message)
 
-        estimate: _Estimate = pipeline('depth-estimation', model=self._model, device=device)
+        estimate: AnimateParallax._Estimate = pipeline('depth-estimation', model=self._model, device=device)
 
         # Place every pixel of the frame against the middle of the video
         horizontal = np.arange(width, dtype=np.float32)
@@ -89,7 +89,7 @@ class AnimateParallax(AbstractNode[ParallaxAnimationInput, ParallaxAnimationOutp
 
         with TemporaryDirectory() as directory:
             output_path = Path(directory) / f'{uuid.uuid4().hex}.mp4'
-            write_frames: _WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
+            write_frames: AnimateParallax._WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
             writer = write_frames(
                 str(output_path),
                 (width, height),
