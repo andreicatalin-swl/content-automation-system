@@ -21,9 +21,6 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-_ReadFrames = Callable[..., Iterator[Any]]
-_WriteFrames = Callable[..., Generator[None, bytes | None, None]]
-
 class MaskMode(StrEnum):
     BRIGHTNESS = 'brightness'
 
@@ -51,6 +48,9 @@ class NoiseAnimationOutput(BaseModel):
 
 # TODO: Implement proper execute(...) -> ... method
 class AnimateNoise(AbstractNode[NoiseAnimationInput, NoiseAnimationOutput]):
+    _ReadFrames = Callable[..., Iterator[Any]]
+    _WriteFrames = Callable[..., Generator[None, bytes | None, None]]
+
     def __init__(
         self,
         artifact_manager: ArtifactManager,
@@ -63,7 +63,7 @@ class AnimateNoise(AbstractNode[NoiseAnimationInput, NoiseAnimationOutput]):
 
     def execute(self, input: NoiseAnimationInput) -> NoiseAnimationOutput:
         # Open the video and take its size and frame rate
-        read_frames: _ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
+        read_frames: AnimateNoise._ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
         reader = read_frames(str(self._artifact_manager.path(input.video)))
         meta: dict[str, Any] = next(reader)
         size: tuple[int, int] = meta['size']
@@ -90,7 +90,7 @@ class AnimateNoise(AbstractNode[NoiseAnimationInput, NoiseAnimationOutput]):
 
         with TemporaryDirectory() as directory:
             output_path = Path(directory) / f'{uuid.uuid4().hex}.mp4'
-            write_frames: _WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
+            write_frames: AnimateNoise._WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
             writer = write_frames(
                 str(output_path),
                 (width, height),
