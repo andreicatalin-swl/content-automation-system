@@ -19,8 +19,6 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-_ReadFrames = Callable[..., Generator[Any, None, None]]
-
 class AudioAdditionInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -40,6 +38,8 @@ class AudioAdditionOutput(BaseModel):
 
 # TODO: Implement proper execute(...) -> ... method
 class AddAudio(AbstractNode[AudioAdditionInput, AudioAdditionOutput]):
+    _ReadFrames = Callable[..., Generator[Any, None, None]]
+
     def __init__(
         self,
         artifact_manager: ArtifactManager,
@@ -52,7 +52,7 @@ class AddAudio(AbstractNode[AudioAdditionInput, AudioAdditionOutput]):
 
     def execute(self, input: AudioAdditionInput) -> AudioAdditionOutput:
         video_path = self._artifact_manager.path(input.video)
-        read_frames: _ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
+        read_frames: AddAudio._ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
         reader = read_frames(str(video_path))
         meta: dict[str, Any] = next(reader)
         duration: float = meta['duration']
