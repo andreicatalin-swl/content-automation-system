@@ -18,9 +18,6 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-_ReadFrames = Callable[..., Iterator[Any]]
-_WriteFrames = Callable[..., Generator[None, bytes | None, None]]
-
 class VideoJoiningInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -39,6 +36,9 @@ class VideoJoiningOutput(BaseModel):
 
 # TODO: Implement proper execute(...) -> ... method
 class JoinVideos(AbstractNode[VideoJoiningInput, VideoJoiningOutput]):
+    _ReadFrames = Callable[..., Iterator[Any]]
+    _WriteFrames = Callable[..., Generator[None, bytes | None, None]]
+
     def __init__(
         self,
         artifact_manager: ArtifactManager,
@@ -51,7 +51,7 @@ class JoinVideos(AbstractNode[VideoJoiningInput, VideoJoiningOutput]):
 
     def execute(self, input: VideoJoiningInput) -> VideoJoiningOutput:
         # Take the size and the frame rate of the first video
-        read_frames: _ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
+        read_frames: JoinVideos._ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
         first = read_frames(str(self._artifact_manager.path(input.videos[0])))
         meta: dict[str, Any] = next(first)
         size: tuple[int, int] = meta['size']
@@ -60,7 +60,7 @@ class JoinVideos(AbstractNode[VideoJoiningInput, VideoJoiningOutput]):
 
         with TemporaryDirectory() as directory:
             output_path = Path(directory) / f'{uuid.uuid4().hex}.mp4'
-            write_frames: _WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
+            write_frames: JoinVideos._WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
             writer = write_frames(
                 str(output_path),
                 size,
