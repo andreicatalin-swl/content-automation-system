@@ -2,7 +2,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.artifacts.artifact import Artifact
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
@@ -28,17 +28,17 @@ class YoutubeVideoPostingInput(BaseModel):
 
     video: Artifact
     title: str
-    description: str = ''
-    tags: list[str] = Field(default_factory=list)
-    category_id: str = '22'
-    privacy_status: YoutubePrivacyStatus = YoutubePrivacyStatus.PRIVATE
-    made_for_kids: bool = False
-    notify_subscribers: bool = False
-    embeddable: bool = True
-    public_stats_viewable: bool = True
-    contains_synthetic_media: bool = False
-    default_language: str | None = None
-    default_audio_language: str | None = None
+    description: str
+    tags: list[str]
+    category_id: str
+    privacy_status: YoutubePrivacyStatus
+    made_for_kids: bool
+    notify_subscribers: bool
+    embeddable: bool
+    public_stats_viewable: bool
+    contains_synthetic_media: bool
+    default_language: str | None
+    default_audio_language: str | None
 
     def __repr__(self) -> str:
         return f'{self.video!r} posted as {self.title!r}'

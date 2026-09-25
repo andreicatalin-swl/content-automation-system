@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, Final, TypeVar
 
 from langgraph.graph import END, START, StateGraph  # type: ignore
@@ -23,6 +24,11 @@ from content_automation_pipeline.content_agent.nodes.join_videos import (
     JoinVideos,
     VideoJoiningInput,
 )
+from content_automation_pipeline.content_agent.nodes.post_youtube_video import (
+    PostYoutubeVideo,
+    YoutubePrivacyStatus,
+    YoutubeVideoPostingInput,
+)
 from content_automation_pipeline.t2i_agent.graphs.graph import Graph as T2IGraph
 from content_automation_pipeline.t2i_agent.models.evaluation import Evaluation
 from content_automation_pipeline.t2i_agent.states.state import State as T2IState
@@ -38,6 +44,18 @@ class State(BaseModel):
     generation_instructions: list[str]
     evaluation_instructions: list[str]
     audio: Artifact
+    youtube_title: str
+    youtube_description: str
+    youtube_tags: list[str]
+    youtube_category_id: str
+    youtube_privacy_status: YoutubePrivacyStatus
+    youtube_made_for_kids: bool
+    youtube_notify_subscribers: bool
+    youtube_embeddable: bool
+    youtube_public_stats_viewable: bool
+    youtube_contains_synthetic_media: bool
+    youtube_default_language: str | None
+    youtube_default_audio_language: str | None
     feedback: list[list[str]] = []
     convert_image_duration: float = Field(default=5.0, gt=0.0, allow_inf_nan=False)
     convert_image_fps: int = Field(default=30, gt=0)
@@ -54,6 +72,8 @@ class State(BaseModel):
     animated_videos: list[Artifact] = []
     joined_video: Artifact | None = None
     video: Artifact | None = None
+    youtube_video_id: str | None = None
+    youtube_url: str | None = None
     evaluations: list[Evaluation] = []
 
 class Graph1:
@@ -67,6 +87,7 @@ class Graph1:
     _ANIMATE_NOISE_NODE: Final[str] = 'animate_noise'
     _JOIN_VIDEOS_NODE: Final[str] = 'join_videos'
     _ADD_AUDIO_NODE: Final[str] = 'add_audio'
+    _POST_YOUTUBE_VIDEO_NODE: Final[str] = 'post_youtube_video'
 
     def __init__(
         self,
@@ -82,6 +103,9 @@ class Graph1:
         join_videos_category: str,
         add_audio_artifact_manager: ArtifactManager,
         add_audio_category: str,
+        post_youtube_video_artifact_manager: ArtifactManager,
+        post_youtube_video_client_secrets_path: Path,
+        post_youtube_video_token_path: Path,
         t2i_generate_kind: Kind = _KIND,
         convert_image_kind: Kind = _KIND,
         animate_noise_kind: Kind = _KIND,
@@ -122,6 +146,11 @@ class Graph1:
             add_audio_category,
             add_audio_kind,
         )
+        self._post_youtube_video = PostYoutubeVideo(
+            post_youtube_video_artifact_manager,
+            post_youtube_video_client_secrets_path,
+            post_youtube_video_token_path,
+        )
 
         graph = StateGraph(State)
         graph.add_node(self._T2I_AGENT_NODE, self._run_t2i_agent)  # type: ignore
@@ -129,13 +158,15 @@ class Graph1:
         graph.add_node(self._ANIMATE_NOISE_NODE, self._run_animate_noise)  # type: ignore
         graph.add_node(self._JOIN_VIDEOS_NODE, self._run_join_videos)  # type: ignore
         graph.add_node(self._ADD_AUDIO_NODE, self._run_add_audio)  # type: ignore
+        graph.add_node(self._POST_YOUTUBE_VIDEO_NODE, self._run_post_youtube_video)  # type: ignore
 
         graph.add_edge(START, self._T2I_AGENT_NODE)
         graph.add_edge(self._T2I_AGENT_NODE, self._CONVERT_IMAGE_NODE)
         graph.add_edge(self._CONVERT_IMAGE_NODE, self._ANIMATE_NOISE_NODE)
         graph.add_edge(self._ANIMATE_NOISE_NODE, self._JOIN_VIDEOS_NODE)
         graph.add_edge(self._JOIN_VIDEOS_NODE, self._ADD_AUDIO_NODE)
-        graph.add_edge(self._ADD_AUDIO_NODE, END)
+        graph.add_edge(self._ADD_AUDIO_NODE, self._POST_YOUTUBE_VIDEO_NODE)
+        graph.add_edge(self._POST_YOUTUBE_VIDEO_NODE, END)
 
         self._compiled_state_graph: CompiledStateGraph[State, None, State, State] = graph.compile()  # type: ignore
 
@@ -215,6 +246,30 @@ class Graph1:
         )
 
         return {'video': output.video}
+
+    def _run_post_youtube_video(self, state: State) -> dict[str, Any]:
+        output = self._post_youtube_video(
+            YoutubeVideoPostingInput(
+                video=self._require(state.video, 'final video'),
+                title=state.youtube_title,
+                description=state.youtube_description,
+                tags=state.youtube_tags,
+                category_id=state.youtube_category_id,
+                privacy_status=state.youtube_privacy_status,
+                made_for_kids=state.youtube_made_for_kids,
+                notify_subscribers=state.youtube_notify_subscribers,
+                embeddable=state.youtube_embeddable,
+                public_stats_viewable=state.youtube_public_stats_viewable,
+                contains_synthetic_media=state.youtube_contains_synthetic_media,
+                default_language=state.youtube_default_language,
+                default_audio_language=state.youtube_default_audio_language,
+            ),
+        )
+
+        return {
+            'youtube_video_id': output.video_id,
+            'youtube_url': output.url,
+        }
 
     @staticmethod
     def _require(value: T | None, name: str) -> T:
