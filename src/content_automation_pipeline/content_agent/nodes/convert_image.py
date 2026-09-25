@@ -21,8 +21,6 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-_WriteFrames = Callable[..., Generator[None, bytes | None, None]]
-
 class ImageConversionInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -43,6 +41,8 @@ class ImageConversionOutput(BaseModel):
 
 # TODO: Implement proper execute(...) -> ... method
 class ConvertImage(AbstractNode[ImageConversionInput, ImageConversionOutput]):
+    _WriteFrames = Callable[..., Generator[None, bytes | None, None]]
+
     def __init__(
         self,
         artifact_manager: ArtifactManager,
@@ -65,7 +65,7 @@ class ConvertImage(AbstractNode[ImageConversionInput, ImageConversionOutput]):
 
         with TemporaryDirectory() as directory:
             output_path = Path(directory) / f'{uuid.uuid4().hex}.mp4'
-            write_frames: _WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
+            write_frames: ConvertImage._WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
             writer = write_frames(
                 str(output_path),
                 (width, height),
