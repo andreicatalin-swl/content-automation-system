@@ -37,6 +37,7 @@ class YoutubeVideoPostingInput(BaseModel):
     embeddable: bool
     public_stats_viewable: bool
     contains_synthetic_media: bool
+    has_paid_product_placement: bool
     default_language: str | None
     default_audio_language: str | None
 
@@ -96,6 +97,9 @@ class PostYoutubeVideo(AbstractNode[YoutubeVideoPostingInput, YoutubeVideoPostin
                 'embeddable': input.embeddable,
                 'publicStatsViewable': input.public_stats_viewable,
                 'containsSyntheticMedia': input.contains_synthetic_media,
+            },
+            'paidProductPlacementDetails': {
+                'hasPaidProductPlacement': input.has_paid_product_placement,
             },
         }
 

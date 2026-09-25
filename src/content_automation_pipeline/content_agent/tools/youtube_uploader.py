@@ -98,7 +98,7 @@ class YoutubeUploader:
             resumable=True,
         )
         request = self._service().videos().insert(
-            part='snippet,status',
+            part='snippet,status,paidProductPlacementDetails',
             body=body,
             media_body=media,
             notifySubscribers=notify_subscribers,

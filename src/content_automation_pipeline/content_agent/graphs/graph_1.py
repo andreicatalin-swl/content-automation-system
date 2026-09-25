@@ -54,6 +54,7 @@ class State(BaseModel):
     youtube_embeddable: bool
     youtube_public_stats_viewable: bool
     youtube_contains_synthetic_media: bool
+    youtube_has_paid_product_placement: bool
     youtube_default_language: str | None
     youtube_default_audio_language: str | None
     feedback: list[list[str]] = []
@@ -261,6 +262,7 @@ class Graph1:
                 embeddable=state.youtube_embeddable,
                 public_stats_viewable=state.youtube_public_stats_viewable,
                 contains_synthetic_media=state.youtube_contains_synthetic_media,
+                has_paid_product_placement=state.youtube_has_paid_product_placement,
                 default_language=state.youtube_default_language,
                 default_audio_language=state.youtube_default_audio_language,
             ),
