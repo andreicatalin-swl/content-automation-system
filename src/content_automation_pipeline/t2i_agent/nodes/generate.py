@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 from typing import Final
 
 import openai_codex
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
@@ -19,7 +19,7 @@ class GenerationInput(BaseModel):
 
     instructions: str
     feedback: list[str]
-    reference_images: list[Path] = Field(default_factory=list)
+    reference_images: list[Artifact]
 
     def __repr__(self) -> str:
         return self.instructions
@@ -68,7 +68,10 @@ class Generate(AbstractNode[GenerationInput, GenerationOutput]):
                 thread = codex.thread_start(cwd=directory, sandbox=openai_codex.Sandbox.workspace_write)
                 thread.run([
                     openai_codex.TextInput(prompt),
-                    *(openai_codex.LocalImageInput(str(path.resolve())) for path in input.reference_images),
+                    *(
+                        openai_codex.LocalImageInput(str(self._artifact_manager.path(artifact)))
+                        for artifact in input.reference_images
+                    ),
                 ])
 
             # Create an artifact for the generated image and publish it to the artifact manager
@@ -131,8 +134,8 @@ class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
                         str(self._artifact_manager.path(input.generation_output.image)),
                     ),
                     *(
-                        openai_codex.LocalImageInput(str(path.resolve()))
-                        for path in input.generation_input.reference_images
+                        openai_codex.LocalImageInput(str(self._artifact_manager.path(artifact)))
+                        for artifact in input.generation_input.reference_images
                     ),
                 ],
                 output_schema=Evaluation.model_json_schema(),

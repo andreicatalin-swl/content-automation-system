@@ -2,8 +2,9 @@ from typing import Any, Final
 
 from langgraph.graph import END, START, StateGraph  # type: ignore
 from langgraph.graph.state import CompiledStateGraph  # type: ignore
+from pydantic import BaseModel, ConfigDict
 
-from content_automation_pipeline.artifacts.artifact import Kind
+from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
 from content_automation_pipeline.shared.rate_limiting_node_decorator import (
     RateLimitingNodeDecorator,
@@ -12,10 +13,18 @@ from content_automation_pipeline.t2i_agent.nodes.generate import (
     Generate,
     GenerationInput,
 )
-from content_automation_pipeline.t2i_agent.states.generation import GenerationState
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
+
+
+class GenerationState(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True, validate_assignment=True)
+
+    generation_instructions: str
+    reference_images: list[Artifact]
+    feedback: list[str]
+    image: Artifact | None
 
 
 class Generation:

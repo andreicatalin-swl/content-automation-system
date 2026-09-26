@@ -2,10 +2,15 @@ from typing import Any, Final, TypeVar
 
 from langgraph.graph import END, START, StateGraph  # type: ignore
 from langgraph.graph.state import CompiledStateGraph  # type: ignore
+from pydantic import ConfigDict
 
 from content_automation_pipeline.artifacts.artifact import Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
-from content_automation_pipeline.t2i_agent.graphs.generation import Generation
+from content_automation_pipeline.t2i_agent.graphs.generation import (
+    Generation,
+    GenerationState,
+)
+from content_automation_pipeline.t2i_agent.models.evaluation import Evaluation
 from content_automation_pipeline.t2i_agent.nodes.decide import (
     Decide,
     DecisionInput,
@@ -16,13 +21,19 @@ from content_automation_pipeline.t2i_agent.nodes.generate import (
     GenerationInput,
     GenerationOutput,
 )
-from content_automation_pipeline.t2i_agent.states.generation import GenerationState
-from content_automation_pipeline.t2i_agent.states.state import State
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
 T = TypeVar('T')
+
+
+class State(GenerationState):
+    model_config = ConfigDict(extra='forbid', strict=True, validate_assignment=True)
+
+    evaluation_instructions: str
+    evaluation: Evaluation | None
+
 
 class Graph:
     # Default values that can be overridden by the user
@@ -81,6 +92,7 @@ class Graph:
                     generation_instructions=state.generation_instructions,
                     reference_images=state.reference_images,
                     feedback=state.feedback,
+                    image=None,
                 ),
             ),
         )

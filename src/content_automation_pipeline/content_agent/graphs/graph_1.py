@@ -34,8 +34,8 @@ from content_automation_pipeline.content_agent.nodes.post_youtube_video import (
     YoutubeVideoPostingInput,
 )
 from content_automation_pipeline.t2i_agent.graphs.graph import Graph as T2IGraph
+from content_automation_pipeline.t2i_agent.graphs.graph import State as T2IState
 from content_automation_pipeline.t2i_agent.models.evaluation import Evaluation
-from content_automation_pipeline.t2i_agent.states.state import State as T2IState
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -197,7 +197,10 @@ class Graph1:
                     T2IState(
                         generation_instructions=state.generation_instructions[index],
                         evaluation_instructions=state.evaluation_instructions[index],
+                        reference_images=[],
                         feedback=state.feedback[index] if index < len(state.feedback) else [],
+                        image=None,
+                        evaluation=None,
                     ),
                 ),
             )
