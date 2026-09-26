@@ -5,9 +5,7 @@ from langgraph.graph.state import CompiledStateGraph  # type: ignore
 
 from content_automation_pipeline.artifacts.artifact import Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
-from content_automation_pipeline.shared.rate_limiting_node_decorator import (
-    RateLimitingNodeDecorator,
-)
+from content_automation_pipeline.t2i_agent.graphs.generation import Generation
 from content_automation_pipeline.t2i_agent.nodes.decide import (
     Decide,
     DecisionInput,
@@ -15,10 +13,10 @@ from content_automation_pipeline.t2i_agent.nodes.decide import (
 from content_automation_pipeline.t2i_agent.nodes.generate import (
     Evaluate,
     EvaluationInput,
-    Generate,
     GenerationInput,
     GenerationOutput,
 )
+from content_automation_pipeline.t2i_agent.states.generation import GenerationState
 from content_automation_pipeline.t2i_agent.states.state import State
 from content_automation_pipeline.utilities.logger import create_logger
 
@@ -32,7 +30,7 @@ class Graph:
     _GENERATE_MAX_CALLS: Final[int] = 1
 
     # Hardcoded values that cannot be overridden by the user
-    _GENERATE_NODE: Final[str] = 'generate'
+    _GENERATION_AGENT_NODE: Final[str] = 'generation_agent'
     _EVALUATE_NODE: Final[str] = 'evaluate'
 
     def __init__(
@@ -47,23 +45,25 @@ class Graph:
         message = 'building the t2i graph'
         _logger.info(message)
 
-        self._generate = RateLimitingNodeDecorator(
-            Generate(generate_artifact_manager, generate_category, generate_kind),
+        self._generation_agent = Generation(
+            generate_artifact_manager,
+            generate_category,
+            generate_kind,
             generate_max_calls,
-        )
+        ).get_compiled_state_graph()
         self._evaluate = Evaluate(evaluate_artifact_manager)
-        self._decide = Decide(END, self._GENERATE_NODE)
+        self._decide = Decide(END, self._GENERATION_AGENT_NODE)
 
         graph = StateGraph(State)
-        graph.add_node(self._GENERATE_NODE, self._run_generate)  # type: ignore
+        graph.add_node(self._GENERATION_AGENT_NODE, self._run_generation_agent)  # type: ignore
         graph.add_node(self._EVALUATE_NODE, self._run_evaluate)  # type: ignore
 
-        graph.add_edge(START, self._GENERATE_NODE)
-        graph.add_edge(self._GENERATE_NODE, self._EVALUATE_NODE)
+        graph.add_edge(START, self._GENERATION_AGENT_NODE)
+        graph.add_edge(self._GENERATION_AGENT_NODE, self._EVALUATE_NODE)
         graph.add_conditional_edges(
             self._EVALUATE_NODE,
             self._run_decide,
-            [END, self._GENERATE_NODE],
+            [END, self._GENERATION_AGENT_NODE],
         )
 
         self._compiled_state_graph: CompiledStateGraph[State, None, State, State] = graph.compile()  # type: ignore
@@ -74,17 +74,27 @@ class Graph:
     def get_compiled_state_graph(self) -> CompiledStateGraph[State, None, State, State]:
         return self._compiled_state_graph
 
-    def _run_generate(self, state: State) -> dict[str, Any]:
-        output = self._generate(
-            GenerationInput(instructions=state.generation_instructions, feedback=state.feedback),
+    def _run_generation_agent(self, state: State) -> dict[str, Any]:
+        output = GenerationState.model_validate(
+            self._generation_agent.invoke(  # type: ignore
+                GenerationState(
+                    generation_instructions=state.generation_instructions,
+                    reference_images=state.reference_images,
+                    feedback=state.feedback,
+                ),
+            ),
         )
 
-        return {'image': output.image}
+        return {'image': self._require(output.image, 'generated image')}
 
     def _run_evaluate(self, state: State) -> dict[str, Any]:
         output = self._evaluate(
             EvaluationInput(
-                generation_input=GenerationInput(instructions=state.generation_instructions, feedback=state.feedback),
+                generation_input=GenerationInput(
+                    instructions=state.generation_instructions,
+                    feedback=state.feedback,
+                    reference_images=state.reference_images,
+                ),
                 generation_output=GenerationOutput(image=self._require(state.image, 'image')),
                 instructions=state.evaluation_instructions,
             ),

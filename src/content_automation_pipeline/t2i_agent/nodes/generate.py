@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 from typing import Final
 
 import openai_codex
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
@@ -19,6 +19,7 @@ class GenerationInput(BaseModel):
 
     instructions: str
     feedback: list[str]
+    reference_images: list[Path] = Field(default_factory=list)
 
     def __repr__(self) -> str:
         return self.instructions
@@ -34,8 +35,8 @@ class GenerationOutput(BaseModel):
 class Generate(AbstractNode[GenerationInput, GenerationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _PROMPT_TEMPLATE: Final[str] = (
-        'Generate an image using your built-in image generation tool, respecting the instructions and the '
-        'feedback from the previous generations.\n\n'
+        'Generate an image using your built-in image generation tool, respecting the instructions, reference '
+        'images, and feedback from previous generations.\n\n'
         'Instructions: {instructions}\n\n'
         'Feedback from the previous generations: {feedback}\n\n'
         'Save the image as a PNG file at the following path: {output_path}'
@@ -65,7 +66,10 @@ class Generate(AbstractNode[GenerationInput, GenerationOutput]):
             # Use OpenAI Codex for the generation
             with openai_codex.Codex() as codex:
                 thread = codex.thread_start(cwd=directory, sandbox=openai_codex.Sandbox.workspace_write)
-                thread.run(prompt)
+                thread.run([
+                    openai_codex.TextInput(prompt),
+                    *(openai_codex.LocalImageInput(str(path.resolve())) for path in input.reference_images),
+                ])
 
             # Create an artifact for the generated image and publish it to the artifact manager
             artifact = Artifact(kind=self._kind, category=self._category, name=output_path.name)
@@ -94,14 +98,13 @@ class EvaluationOutput(BaseModel):
 class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _PROMPT_TEMPLATE: Final[str] = (
-        'Check the generated image against the generation instructions and the generation feedback it had to '
-        'respect, and evaluate it according to the instructions.\n\n'
+        'Check the first attached image against the generation instructions, reference images, and generation '
+        'feedback, then evaluate it according to the instructions. Any remaining images are references.\n\n'
         'Assign the grade pass when the image is successful in the evaluation, and the grade fail otherwise. '
         'Give feedback that supports the grade.\n\n'
         'Generation instructions: {generation_instructions}\n\n'
         'Generation feedback from the previous attempts: {generation_feedback}\n\n'
-        'Instructions: {instructions}\n\n'
-        'Read the image from the following path: {image_path}'
+        'Instructions: {instructions}'
     )
 
     def __init__(
@@ -116,13 +119,24 @@ class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
             generation_instructions=input.generation_input.instructions,
             generation_feedback='\n'.join(input.generation_input.feedback),
             instructions=input.instructions,
-            image_path=self._artifact_manager.path(input.generation_output.image),
         )
 
         # Use OpenAI Codex for the evaluation
         with openai_codex.Codex() as codex:
             thread = codex.thread_start(sandbox=openai_codex.Sandbox.read_only)
-            result = thread.run(prompt, output_schema=Evaluation.model_json_schema())
+            result = thread.run(
+                [
+                    openai_codex.TextInput(prompt),
+                    openai_codex.LocalImageInput(
+                        str(self._artifact_manager.path(input.generation_output.image)),
+                    ),
+                    *(
+                        openai_codex.LocalImageInput(str(path.resolve()))
+                        for path in input.generation_input.reference_images
+                    ),
+                ],
+                output_schema=Evaluation.model_json_schema(),
+            )
 
         final_response = result.final_response
 
