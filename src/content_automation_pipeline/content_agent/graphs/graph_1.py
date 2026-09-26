@@ -33,11 +33,10 @@ from content_automation_pipeline.content_agent.nodes.post_youtube_video import (
     YoutubePrivacyStatus,
     YoutubeVideoPostingInput,
 )
-from content_automation_pipeline.t2i_agent.graphs.generation_evaluation import (
-    GenerationEvaluation,
-    GenerationEvaluationState,
+from content_automation_pipeline.t2i_agent.graphs.generation import (
+    Generation,
+    GenerationState,
 )
-from content_automation_pipeline.t2i_agent.models.evaluation import Evaluation
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -48,7 +47,8 @@ class State(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True, validate_assignment=True)
 
     generation_instructions: list[str]
-    evaluation_instructions: list[str]
+    reference_images: list[Artifact]
+    feedback: list[list[str]]
     audio: Artifact
     post_to_youtube: bool
     youtube_title: str
@@ -64,25 +64,23 @@ class State(BaseModel):
     youtube_has_paid_product_placement: bool
     youtube_default_language: str | None
     youtube_default_audio_language: str | None
-    feedback: list[list[str]] = []
-    convert_image_duration: float = Field(default=5.0, gt=0.0, allow_inf_nan=False)
-    convert_image_fps: int = Field(default=30, gt=0)
+    convert_image_duration: float = Field(gt=0.0, allow_inf_nan=False)
+    convert_image_fps: int = Field(gt=0)
 
-    animate_noise_strength: float = Field(default=0.45, ge=0.0, le=1.0, allow_inf_nan=False)
-    animate_noise_speed: float = Field(default=30.0, ge=0.0, allow_inf_nan=False)
-    animate_noise_scale: float = Field(default=1.0, gt=0.0, allow_inf_nan=False)
-    animate_noise_mask_threshold: float = Field(default=0.2, ge=0.0, le=1.0, allow_inf_nan=False)
-    animate_noise_mask_softness: float = Field(default=0.35, ge=0.0, le=1.0, allow_inf_nan=False)
-    animate_noise_mask_mode: MaskMode = MaskMode.BRIGHTNESS
+    animate_noise_strength: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    animate_noise_speed: float = Field(ge=0.0, allow_inf_nan=False)
+    animate_noise_scale: float = Field(gt=0.0, allow_inf_nan=False)
+    animate_noise_mask_threshold: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    animate_noise_mask_softness: float = Field(ge=0.0, le=1.0, allow_inf_nan=False)
+    animate_noise_mask_mode: MaskMode
 
-    images: list[Artifact] = []
-    converted_videos: list[Artifact] = []
-    animated_videos: list[Artifact] = []
-    joined_video: Artifact | None = None
-    video: Artifact | None = None
-    youtube_video_id: str | None = None
-    youtube_url: str | None = None
-    evaluations: list[Evaluation] = []
+    images: list[Artifact]
+    converted_videos: list[Artifact]
+    animated_videos: list[Artifact]
+    joined_video: Artifact | None
+    video: Artifact | None
+    youtube_video_id: str | None
+    youtube_url: str | None
 
 class Graph1:
     # Default values that can be overridden by the user
@@ -90,7 +88,7 @@ class Graph1:
     _T2I_GENERATE_MAX_CALLS: Final[int] = 1
 
     # Hardcoded values that cannot be overridden by the user
-    _T2I_AGENT_NODE: Final[str] = 't2i_agent'
+    _T2I_GENERATION_AGENT_NODE: Final[str] = 't2i_generation_agent'
     _CONVERT_IMAGE_NODE: Final[str] = 'convert_image'
     _ANIMATE_NOISE_NODE: Final[str] = 'animate_noise'
     _JOIN_VIDEOS_NODE: Final[str] = 'join_videos'
@@ -102,7 +100,6 @@ class Graph1:
         generations: int,
         t2i_generate_artifact_manager: ArtifactManager,
         t2i_generate_category: str,
-        t2i_evaluate_artifact_manager: ArtifactManager,
         convert_image_artifact_manager: ArtifactManager,
         convert_image_category: str,
         animate_noise_artifact_manager: ArtifactManager,
@@ -124,13 +121,12 @@ class Graph1:
         _logger.info('building content graph 1')
 
         self._generations = generations
-        self._t2i_agents = [
-            GenerationEvaluation(
+        self._t2i_generation_agents = [
+            Generation(
                 generate_artifact_manager=t2i_generate_artifact_manager,
                 generate_category=t2i_generate_category,
                 generate_kind=t2i_generate_kind,
                 generate_max_calls=t2i_generate_max_calls,
-                evaluate_artifact_manager=t2i_evaluate_artifact_manager,
             ).get_compiled_state_graph()
             for _ in range(generations)
         ]
@@ -162,15 +158,15 @@ class Graph1:
         self._decide_on_post_to_youtube = Decide(self._POST_YOUTUBE_VIDEO_NODE, END)
 
         graph = StateGraph(State)
-        graph.add_node(self._T2I_AGENT_NODE, self._run_t2i_agent)  # type: ignore
+        graph.add_node(self._T2I_GENERATION_AGENT_NODE, self._run_t2i_generation_agent)  # type: ignore
         graph.add_node(self._CONVERT_IMAGE_NODE, self._run_convert_image)  # type: ignore
         graph.add_node(self._ANIMATE_NOISE_NODE, self._run_animate_noise)  # type: ignore
         graph.add_node(self._JOIN_VIDEOS_NODE, self._run_join_videos)  # type: ignore
         graph.add_node(self._ADD_AUDIO_NODE, self._run_add_audio)  # type: ignore
         graph.add_node(self._POST_YOUTUBE_VIDEO_NODE, self._run_post_youtube_video)  # type: ignore
 
-        graph.add_edge(START, self._T2I_AGENT_NODE)
-        graph.add_edge(self._T2I_AGENT_NODE, self._CONVERT_IMAGE_NODE)
+        graph.add_edge(START, self._T2I_GENERATION_AGENT_NODE)
+        graph.add_edge(self._T2I_GENERATION_AGENT_NODE, self._CONVERT_IMAGE_NODE)
         graph.add_edge(self._CONVERT_IMAGE_NODE, self._ANIMATE_NOISE_NODE)
         graph.add_edge(self._ANIMATE_NOISE_NODE, self._JOIN_VIDEOS_NODE)
         graph.add_edge(self._JOIN_VIDEOS_NODE, self._ADD_AUDIO_NODE)
@@ -188,33 +184,23 @@ class Graph1:
     def get_compiled_state_graph(self) -> CompiledStateGraph[State, None, State, State]:
         return self._compiled_state_graph
 
-    def _run_t2i_agent(self, state: State) -> dict[str, Any]:
+    def _run_t2i_generation_agent(self, state: State) -> dict[str, Any]:
         images: list[Artifact] = []
-        evaluations: list[Evaluation] = []
-        feedback: list[list[str]] = []
 
         for index in range(self._generations):
-            output = GenerationEvaluationState.model_validate(
-                self._t2i_agents[index].invoke(  # type: ignore
-                    GenerationEvaluationState(
+            output = GenerationState.model_validate(
+                self._t2i_generation_agents[index].invoke(  # type: ignore
+                    GenerationState(
                         generation_instructions=state.generation_instructions[index],
-                        evaluation_instructions=state.evaluation_instructions[index],
-                        reference_images=[],
+                        reference_images=state.reference_images,
                         feedback=state.feedback[index] if index < len(state.feedback) else [],
                         image=None,
-                        evaluation=None,
                     ),
                 ),
             )
             images.append(self._require(output.image, 'generated image'))
-            evaluations.append(self._require(output.evaluation, 'image evaluation'))
-            feedback.append(output.feedback)
 
-        return {
-            'images': images,
-            'evaluations': evaluations,
-            'feedback': feedback,
-        }
+        return {'images': images}
 
     def _run_convert_image(self, state: State) -> dict[str, Any]:
         videos = [
