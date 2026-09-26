@@ -33,9 +33,9 @@ from content_automation_pipeline.content_agent.nodes.post_youtube_video import (
     YoutubePrivacyStatus,
     YoutubeVideoPostingInput,
 )
-from content_automation_pipeline.t2i_agent.graphs.graph import Graph as T2IGraph
-from content_automation_pipeline.t2i_agent.models.evaluation import Evaluation
-from content_automation_pipeline.t2i_agent.states.state import State as T2IState
+from content_automation_pipeline.i2i_agent.graphs.graph import Graph as I2IGraph
+from content_automation_pipeline.i2i_agent.models.evaluation import Evaluation
+from content_automation_pipeline.i2i_agent.states.state import State as I2IState
 from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -47,6 +47,7 @@ class State(BaseModel):
 
     generation_instructions: list[str]
     evaluation_instructions: list[str]
+    reference_images: list[Artifact]
     audio: Artifact
     post_to_youtube: bool
     youtube_title: str
@@ -85,10 +86,10 @@ class State(BaseModel):
 class Graph1:
     # Default values that can be overridden by the user
     _KIND: Final[Kind] = Kind.TEMPORARY
-    _T2I_GENERATE_MAX_CALLS: Final[int] = 1
+    _I2I_GENERATE_MAX_CALLS: Final[int] = 1
 
     # Hardcoded values that cannot be overridden by the user
-    _T2I_AGENT_NODE: Final[str] = 't2i_agent'
+    _I2I_AGENT_NODE: Final[str] = 'i2i_agent'
     _CONVERT_IMAGE_NODE: Final[str] = 'convert_image'
     _ANIMATE_NOISE_NODE: Final[str] = 'animate_noise'
     _JOIN_VIDEOS_NODE: Final[str] = 'join_videos'
@@ -98,9 +99,9 @@ class Graph1:
     def __init__(
         self,
         generations: int,
-        t2i_generate_artifact_manager: ArtifactManager,
-        t2i_generate_category: str,
-        t2i_evaluate_artifact_manager: ArtifactManager,
+        i2i_generate_artifact_manager: ArtifactManager,
+        i2i_generate_category: str,
+        i2i_evaluate_artifact_manager: ArtifactManager,
         convert_image_artifact_manager: ArtifactManager,
         convert_image_category: str,
         animate_noise_artifact_manager: ArtifactManager,
@@ -112,23 +113,23 @@ class Graph1:
         post_youtube_video_artifact_manager: ArtifactManager,
         post_youtube_video_client_secrets_path: Path,
         post_youtube_video_token_path: Path,
-        t2i_generate_kind: Kind = _KIND,
+        i2i_generate_kind: Kind = _KIND,
         convert_image_kind: Kind = _KIND,
         animate_noise_kind: Kind = _KIND,
         join_videos_kind: Kind = _KIND,
         add_audio_kind: Kind = _KIND,
-        t2i_generate_max_calls: int = _T2I_GENERATE_MAX_CALLS,
+        i2i_generate_max_calls: int = _I2I_GENERATE_MAX_CALLS,
     ) -> None:
         _logger.info('building content graph 1')
 
         self._generations = generations
-        self._t2i_agents = [
-            T2IGraph(
-                generate_artifact_manager=t2i_generate_artifact_manager,
-                generate_category=t2i_generate_category,
-                generate_kind=t2i_generate_kind,
-                generate_max_calls=t2i_generate_max_calls,
-                evaluate_artifact_manager=t2i_evaluate_artifact_manager,
+        self._i2i_agents = [
+            I2IGraph(
+                generate_artifact_manager=i2i_generate_artifact_manager,
+                generate_category=i2i_generate_category,
+                generate_kind=i2i_generate_kind,
+                generate_max_calls=i2i_generate_max_calls,
+                evaluate_artifact_manager=i2i_evaluate_artifact_manager,
             ).get_compiled_state_graph()
             for _ in range(generations)
         ]
@@ -160,15 +161,15 @@ class Graph1:
         self._decide_on_post_to_youtube = Decide(self._POST_YOUTUBE_VIDEO_NODE, END)
 
         graph = StateGraph(State)
-        graph.add_node(self._T2I_AGENT_NODE, self._run_t2i_agent)  # type: ignore
+        graph.add_node(self._I2I_AGENT_NODE, self._run_i2i_agent)  # type: ignore
         graph.add_node(self._CONVERT_IMAGE_NODE, self._run_convert_image)  # type: ignore
         graph.add_node(self._ANIMATE_NOISE_NODE, self._run_animate_noise)  # type: ignore
         graph.add_node(self._JOIN_VIDEOS_NODE, self._run_join_videos)  # type: ignore
         graph.add_node(self._ADD_AUDIO_NODE, self._run_add_audio)  # type: ignore
         graph.add_node(self._POST_YOUTUBE_VIDEO_NODE, self._run_post_youtube_video)  # type: ignore
 
-        graph.add_edge(START, self._T2I_AGENT_NODE)
-        graph.add_edge(self._T2I_AGENT_NODE, self._CONVERT_IMAGE_NODE)
+        graph.add_edge(START, self._I2I_AGENT_NODE)
+        graph.add_edge(self._I2I_AGENT_NODE, self._CONVERT_IMAGE_NODE)
         graph.add_edge(self._CONVERT_IMAGE_NODE, self._ANIMATE_NOISE_NODE)
         graph.add_edge(self._ANIMATE_NOISE_NODE, self._JOIN_VIDEOS_NODE)
         graph.add_edge(self._JOIN_VIDEOS_NODE, self._ADD_AUDIO_NODE)
@@ -186,18 +187,21 @@ class Graph1:
     def get_compiled_state_graph(self) -> CompiledStateGraph[State, None, State, State]:
         return self._compiled_state_graph
 
-    def _run_t2i_agent(self, state: State) -> dict[str, Any]:
+    def _run_i2i_agent(self, state: State) -> dict[str, Any]:
         images: list[Artifact] = []
         evaluations: list[Evaluation] = []
         feedback: list[list[str]] = []
 
         for index in range(self._generations):
-            output = T2IState.model_validate(
-                self._t2i_agents[index].invoke(  # type: ignore
-                    T2IState(
+            output = I2IState.model_validate(
+                self._i2i_agents[index].invoke(  # type: ignore
+                    I2IState(
+                        images=state.reference_images,
                         generation_instructions=state.generation_instructions[index],
                         evaluation_instructions=state.evaluation_instructions[index],
                         feedback=state.feedback[index] if index < len(state.feedback) else [],
+                        image=None,
+                        evaluation=None,
                     ),
                 ),
             )
