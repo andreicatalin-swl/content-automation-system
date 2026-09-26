@@ -19,7 +19,6 @@ class GenerationInput(BaseModel):
 
     instructions: str
     feedback: list[str]
-    reference_images: list[Artifact]
 
     def __repr__(self) -> str:
         return self.instructions
@@ -35,8 +34,8 @@ class GenerationOutput(BaseModel):
 class Generate(AbstractNode[GenerationInput, GenerationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _PROMPT_TEMPLATE: Final[str] = (
-        'Create a new image using reference-based image editing with your built-in image generation tool. Pass every '
-        'attached image into the tool as a style reference; do not use text-only image generation.\n\n'
+        'Generate an image using your built-in image generation tool, respecting the instructions and the '
+        'feedback from the previous generations.\n\n'
         'Instructions: {instructions}\n\n'
         'Feedback from the previous generations: {feedback}\n\n'
         'Save the image as a PNG file at the following path: {output_path}'
@@ -66,13 +65,7 @@ class Generate(AbstractNode[GenerationInput, GenerationOutput]):
             # Use OpenAI Codex for the generation
             with openai_codex.Codex() as codex:
                 thread = codex.thread_start(cwd=directory, sandbox=openai_codex.Sandbox.workspace_write)
-                thread.run([
-                    openai_codex.TextInput(prompt),
-                    *(
-                        openai_codex.LocalImageInput(str(self._artifact_manager.path(artifact)))
-                        for artifact in input.reference_images
-                    ),
-                ])
+                thread.run(prompt)
 
             # Create an artifact for the generated image and publish it to the artifact manager
             artifact = Artifact(kind=self._kind, category=self._category, name=output_path.name)
@@ -101,13 +94,14 @@ class EvaluationOutput(BaseModel):
 class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _PROMPT_TEMPLATE: Final[str] = (
-        'Check the first attached image against the generation instructions, reference images, and generation '
-        'feedback, then evaluate it according to the instructions. Any remaining images are references.\n\n'
+        'Check the generated image against the generation instructions and the generation feedback it had to '
+        'respect, and evaluate it according to the instructions.\n\n'
         'Assign the grade pass when the image is successful in the evaluation, and the grade fail otherwise. '
         'Give feedback that supports the grade.\n\n'
         'Generation instructions: {generation_instructions}\n\n'
         'Generation feedback from the previous attempts: {generation_feedback}\n\n'
-        'Instructions: {instructions}'
+        'Instructions: {instructions}\n\n'
+        'Read the image from the following path: {image_path}'
     )
 
     def __init__(
@@ -122,24 +116,13 @@ class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
             generation_instructions=input.generation_input.instructions,
             generation_feedback='\n'.join(input.generation_input.feedback),
             instructions=input.instructions,
+            image_path=self._artifact_manager.path(input.generation_output.image),
         )
 
         # Use OpenAI Codex for the evaluation
         with openai_codex.Codex() as codex:
             thread = codex.thread_start(sandbox=openai_codex.Sandbox.read_only)
-            result = thread.run(
-                [
-                    openai_codex.TextInput(prompt),
-                    openai_codex.LocalImageInput(
-                        str(self._artifact_manager.path(input.generation_output.image)),
-                    ),
-                    *(
-                        openai_codex.LocalImageInput(str(self._artifact_manager.path(artifact)))
-                        for artifact in input.generation_input.reference_images
-                    ),
-                ],
-                output_schema=Evaluation.model_json_schema(),
-            )
+            result = thread.run(prompt, output_schema=Evaluation.model_json_schema())
 
         final_response = result.final_response
 
