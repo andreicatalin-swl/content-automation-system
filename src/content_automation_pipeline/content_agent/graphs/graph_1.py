@@ -20,6 +20,10 @@ from content_automation_pipeline.content_agent.nodes.convert_image import (
     ConvertImage,
     ImageConversionInput,
 )
+from content_automation_pipeline.content_agent.nodes.decide import (
+    Decide,
+    DecisionInput,
+)
 from content_automation_pipeline.content_agent.nodes.join_videos import (
     JoinVideos,
     VideoJoiningInput,
@@ -44,6 +48,7 @@ class State(BaseModel):
     generation_instructions: list[str]
     evaluation_instructions: list[str]
     audio: Artifact
+    post_to_youtube: bool
     youtube_title: str
     youtube_description: str
     youtube_tags: list[str]
@@ -152,6 +157,7 @@ class Graph1:
             post_youtube_video_client_secrets_path,
             post_youtube_video_token_path,
         )
+        self._decide_on_post_to_youtube = Decide(self._POST_YOUTUBE_VIDEO_NODE, END)
 
         graph = StateGraph(State)
         graph.add_node(self._T2I_AGENT_NODE, self._run_t2i_agent)  # type: ignore
@@ -166,7 +172,11 @@ class Graph1:
         graph.add_edge(self._CONVERT_IMAGE_NODE, self._ANIMATE_NOISE_NODE)
         graph.add_edge(self._ANIMATE_NOISE_NODE, self._JOIN_VIDEOS_NODE)
         graph.add_edge(self._JOIN_VIDEOS_NODE, self._ADD_AUDIO_NODE)
-        graph.add_edge(self._ADD_AUDIO_NODE, self._POST_YOUTUBE_VIDEO_NODE)
+        graph.add_conditional_edges(
+            self._ADD_AUDIO_NODE,
+            self._decide_post_to_youtube_destination,
+            [self._POST_YOUTUBE_VIDEO_NODE, END],
+        )
         graph.add_edge(self._POST_YOUTUBE_VIDEO_NODE, END)
 
         self._compiled_state_graph: CompiledStateGraph[State, None, State, State] = graph.compile()  # type: ignore
@@ -272,6 +282,11 @@ class Graph1:
             'youtube_video_id': output.video_id,
             'youtube_url': output.url,
         }
+
+    def _decide_post_to_youtube_destination(self, state: State) -> str:
+        return self._decide_on_post_to_youtube(
+            DecisionInput(post_to_youtube=state.post_to_youtube),
+        ).destination
 
     @staticmethod
     def _require(value: T | None, name: str) -> T:
