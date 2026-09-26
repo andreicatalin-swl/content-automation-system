@@ -14,7 +14,6 @@ from content_automation_pipeline.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
 
-
 class GenerationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -25,7 +24,6 @@ class GenerationInput(BaseModel):
     def __repr__(self) -> str:
         return self.instructions
 
-
 class GenerationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -33,7 +31,6 @@ class GenerationOutput(BaseModel):
 
     def __repr__(self) -> str:
         return self.image.name
-
 
 class Generate(AbstractNode[GenerationInput, GenerationOutput]):
     # Hardcoded values that cannot be overridden by the user
@@ -82,7 +79,6 @@ class Generate(AbstractNode[GenerationInput, GenerationOutput]):
 
         return GenerationOutput(image=artifact)
 
-
 class EvaluationInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -93,7 +89,6 @@ class EvaluationInput(BaseModel):
     def __repr__(self) -> str:
         return f'{self.generation_output!r} against {self.instructions}'
 
-
 class EvaluationOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -101,7 +96,6 @@ class EvaluationOutput(BaseModel):
 
     def __repr__(self) -> str:
         return repr(self.evaluation)
-
 
 class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
     # Hardcoded values that cannot be overridden by the user

@@ -1,7 +1,9 @@
 from pydantic import BaseModel, ConfigDict
 
 from content_automation_pipeline.shared.abstract_node import AbstractNode
+from content_automation_pipeline.utilities.logger import create_logger
 
+_logger = create_logger(__name__)
 
 class DecisionInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
@@ -11,7 +13,6 @@ class DecisionInput(BaseModel):
     def __repr__(self) -> str:
         return repr(self.post_to_youtube)
 
-
 class DecisionOutput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
@@ -19,7 +20,6 @@ class DecisionOutput(BaseModel):
 
     def __repr__(self) -> str:
         return self.destination
-
 
 class Decide(AbstractNode[DecisionInput, DecisionOutput]):
     def __init__(

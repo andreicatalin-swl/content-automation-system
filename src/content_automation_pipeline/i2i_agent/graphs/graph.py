@@ -26,7 +26,6 @@ _logger = create_logger(__name__)
 
 T = TypeVar('T')
 
-
 class Graph:
     # Default values that can be overridden by the user
     _GENERATE_KIND: Final[Kind] = Kind.TEMPORARY
