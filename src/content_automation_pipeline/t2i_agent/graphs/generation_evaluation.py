@@ -28,14 +28,14 @@ _logger = create_logger(__name__)
 T = TypeVar('T')
 
 
-class State(GenerationState):
+class GenerationEvaluationState(GenerationState):
     model_config = ConfigDict(extra='forbid', strict=True, validate_assignment=True)
 
     evaluation_instructions: str
     evaluation: Evaluation | None
 
 
-class Graph:
+class GenerationEvaluation:
     # Default values that can be overridden by the user
     _GENERATE_KIND: Final[Kind] = Kind.TEMPORARY
     _GENERATE_MAX_CALLS: Final[int] = 1
@@ -53,7 +53,7 @@ class Graph:
         *,
         evaluate_artifact_manager: ArtifactManager,
     ) -> None:
-        message = 'building the t2i graph'
+        message = 'building the t2i generation-evaluation graph'
         _logger.info(message)
 
         self._generation_agent = Generation(
@@ -65,7 +65,7 @@ class Graph:
         self._evaluate = Evaluate(evaluate_artifact_manager)
         self._decide = Decide(END, self._GENERATION_AGENT_NODE)
 
-        graph = StateGraph(State)
+        graph = StateGraph(GenerationEvaluationState)
         graph.add_node(self._GENERATION_AGENT_NODE, self._run_generation_agent)  # type: ignore
         graph.add_node(self._EVALUATE_NODE, self._run_evaluate)  # type: ignore
 
@@ -77,15 +77,27 @@ class Graph:
             [END, self._GENERATION_AGENT_NODE],
         )
 
-        self._compiled_state_graph: CompiledStateGraph[State, None, State, State] = graph.compile()  # type: ignore
+        self._compiled_state_graph: CompiledStateGraph[
+            GenerationEvaluationState,
+            None,
+            GenerationEvaluationState,
+            GenerationEvaluationState,
+        ] = graph.compile()  # type: ignore
 
-        message = 'finished building the t2i graph'
+        message = 'finished building the t2i generation-evaluation graph'
         _logger.info(message)
 
-    def get_compiled_state_graph(self) -> CompiledStateGraph[State, None, State, State]:
+    def get_compiled_state_graph(
+        self,
+    ) -> CompiledStateGraph[
+        GenerationEvaluationState,
+        None,
+        GenerationEvaluationState,
+        GenerationEvaluationState,
+    ]:
         return self._compiled_state_graph
 
-    def _run_generation_agent(self, state: State) -> dict[str, Any]:
+    def _run_generation_agent(self, state: GenerationEvaluationState) -> dict[str, Any]:
         output = GenerationState.model_validate(
             self._generation_agent.invoke(  # type: ignore
                 GenerationState(
@@ -99,7 +111,7 @@ class Graph:
 
         return {'image': self._require(output.image, 'generated image')}
 
-    def _run_evaluate(self, state: State) -> dict[str, Any]:
+    def _run_evaluate(self, state: GenerationEvaluationState) -> dict[str, Any]:
         output = self._evaluate(
             EvaluationInput(
                 generation_input=GenerationInput(
@@ -117,7 +129,7 @@ class Graph:
             'feedback': [*state.feedback, output.evaluation.feedback],
         }
 
-    def _run_decide(self, state: State) -> str:
+    def _run_decide(self, state: GenerationEvaluationState) -> str:
         output = self._decide(DecisionInput(evaluation=self._require(state.evaluation, 'evaluation')))
 
         return output.destination

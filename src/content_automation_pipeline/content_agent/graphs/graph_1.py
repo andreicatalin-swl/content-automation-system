@@ -33,8 +33,10 @@ from content_automation_pipeline.content_agent.nodes.post_youtube_video import (
     YoutubePrivacyStatus,
     YoutubeVideoPostingInput,
 )
-from content_automation_pipeline.t2i_agent.graphs.graph import Graph as T2IGraph
-from content_automation_pipeline.t2i_agent.graphs.graph import State as T2IState
+from content_automation_pipeline.t2i_agent.graphs.generation_evaluation import (
+    GenerationEvaluation,
+    GenerationEvaluationState,
+)
 from content_automation_pipeline.t2i_agent.models.evaluation import Evaluation
 from content_automation_pipeline.utilities.logger import create_logger
 
@@ -123,7 +125,7 @@ class Graph1:
 
         self._generations = generations
         self._t2i_agents = [
-            T2IGraph(
+            GenerationEvaluation(
                 generate_artifact_manager=t2i_generate_artifact_manager,
                 generate_category=t2i_generate_category,
                 generate_kind=t2i_generate_kind,
@@ -192,9 +194,9 @@ class Graph1:
         feedback: list[list[str]] = []
 
         for index in range(self._generations):
-            output = T2IState.model_validate(
+            output = GenerationEvaluationState.model_validate(
                 self._t2i_agents[index].invoke(  # type: ignore
-                    T2IState(
+                    GenerationEvaluationState(
                         generation_instructions=state.generation_instructions[index],
                         evaluation_instructions=state.evaluation_instructions[index],
                         reference_images=[],
