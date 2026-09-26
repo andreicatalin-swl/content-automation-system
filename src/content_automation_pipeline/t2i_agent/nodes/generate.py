@@ -35,8 +35,8 @@ class GenerationOutput(BaseModel):
 class Generate(AbstractNode[GenerationInput, GenerationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _PROMPT_TEMPLATE: Final[str] = (
-        'Generate an image using your built-in image generation tool, respecting the instructions, reference '
-        'images, and feedback from previous generations.\n\n'
+        'Create a new image using reference-based image editing with your built-in image generation tool. Pass every '
+        'attached image into the tool as a style reference; do not use text-only image generation.\n\n'
         'Instructions: {instructions}\n\n'
         'Feedback from the previous generations: {feedback}\n\n'
         'Save the image as a PNG file at the following path: {output_path}'
