@@ -25,3 +25,6 @@ playground/
 
 # content_agent
 src/content_automation_pipeline/content_agent/credentials/
+
+# Local PowerShell cache
+/Microsoft/
