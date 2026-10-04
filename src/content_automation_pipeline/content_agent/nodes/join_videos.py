@@ -1,11 +1,13 @@
+import math
 import uuid
-from collections.abc import Callable, Generator, Iterator
+from collections.abc import Callable, Generator
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Final
 
 import imageio_ffmpeg  # type: ignore
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from content_automation_pipeline.artifacts.artifact import Artifact, Kind
 from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
@@ -21,7 +23,7 @@ _logger = create_logger(__name__)
 class VideoJoiningInput(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
 
-    videos: list[Artifact]
+    videos: list[Artifact] = Field(min_length=1)
 
     def __repr__(self) -> str:
         return ', '.join(repr(video) for video in self.videos)
@@ -36,7 +38,7 @@ class VideoJoiningOutput(BaseModel):
 
 # TODO: Implement proper execute(...) -> ... method
 class JoinVideos(AbstractNode[VideoJoiningInput, VideoJoiningOutput]):
-    _ReadFrames = Callable[..., Iterator[Any]]
+    _ReadFrames = Callable[..., Generator[Any, None, None]]
     _WriteFrames = Callable[..., Generator[None, bytes | None, None]]
 
     def __init__(
@@ -50,34 +52,70 @@ class JoinVideos(AbstractNode[VideoJoiningInput, VideoJoiningOutput]):
         self._kind = kind
 
     def execute(self, input: VideoJoiningInput) -> VideoJoiningOutput:
-        # Take the size and the frame rate of the first video
+        paths = [self._artifact_manager.path(video) for video in input.videos]
+        for path in paths:
+            if not path.is_file():
+                raise FileNotFoundError(f'video does not exist: {path}')
+
+        # Use the first clip's canvas and frame rate for the whole timeline.
         read_frames: JoinVideos._ReadFrames = imageio_ffmpeg.read_frames  # type: ignore
-        first = read_frames(str(self._artifact_manager.path(input.videos[0])))
-        meta: dict[str, Any] = next(first)
+        with closing(read_frames(str(paths[0]))) as first:
+            meta: dict[str, Any] = next(first)
         size: tuple[int, int] = meta['size']
         fps: float = meta['fps']
-        del first
+        if not math.isfinite(fps) or fps <= 0:
+            raise ValueError(f'cannot join videos with invalid frame rate: {fps}')
+        width, height = size
+        if width <= 0 or height <= 0 or width % 2 or height % 2:
+            raise ValueError(f'joining videos requires positive, even canvas dimensions: {size}')
+
+        # Raw video carries no frame boundaries. Feeding differently sized frames
+        # to one writer shifts pixel rows and can combine pixels from two clips.
+        # Fit each clip into the canvas without cropping or stretching its content.
+        # Resample timestamps as well, so different source rates retain their timing.
+        # Do this before scaling: some FFmpeg builds drop the last frame's duration
+        # during scaling, which would make the fps filter discard that frame.
+        filters = (
+            f'setpts=PTS-STARTPTS,fps={fps},'
+            f'scale={width}:{height}:force_original_aspect_ratio=decrease,'
+            f'pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1'
+        )
+        frame_bytes = width * height * 3
 
         with TemporaryDirectory() as directory:
             output_path = Path(directory) / f'{uuid.uuid4().hex}.mp4'
             write_frames: JoinVideos._WriteFrames = imageio_ffmpeg.write_frames  # type: ignore
-            writer = write_frames(
+            with closing(write_frames(
                 str(output_path),
                 size,
                 fps=fps,
                 macro_block_size=1,
-            )
-            writer.send(None)
+                pix_fmt_in='rgb24',
+            )) as writer:
+                writer.send(None)
 
-            # Write every frame of every video, in the order they were given
-            for video in input.videos:
-                reader = read_frames(str(self._artifact_manager.path(video)))
-                next(reader)
-
-                for data in reader:
-                    writer.send(data)
-
-            writer.close()
+                # Keep only one decoder open, and close both processes on failure.
+                for video, path in zip(input.videos, paths):
+                    with closing(read_frames(
+                        str(path),
+                        pix_fmt='rgb24',
+                        output_params=['-vf', filters],
+                    )) as reader:
+                        clip_meta = next(reader)
+                        if clip_meta['size'] != size:
+                            raise ValueError(f'video {video.name} did not normalize to {size}')
+                        frames = 0
+                        for data in reader:
+                            if len(data) != frame_bytes:
+                                raise ValueError(
+                                    f'invalid frame in {video.name}: expected {frame_bytes} bytes, '
+                                    f'got {len(data)}',
+                                )
+                            writer.send(data)
+                            frames += 1
+                        if frames == 0:
+                            raise ValueError(f'video {video.name} contains no frames after normalization')
+                        _logger.info('joined %s: %s frames at %s fps on %s', video.name, frames, fps, size)
 
             # Publish the video as an artifact
             artifact = Artifact(kind=self._kind, category=self._category, name=output_path.name)
