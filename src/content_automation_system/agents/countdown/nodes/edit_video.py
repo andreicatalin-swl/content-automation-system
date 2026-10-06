@@ -41,6 +41,12 @@ class VideoEditingOutput(BaseModel):
         return self.video.name
 
 class EditVideo(AbstractNode[VideoEditingInput, VideoEditingOutput]):
+    # Hardcoded values that cannot be overridden by the user
+    _SCRIPT_KEY: Final[str] = 'script'
+    _MEDIA_FILES_KEY: Final[str] = 'media_files'
+    _AUDIO_KEY: Final[str] = 'audio'
+    _VIDEO_KEY: Final[str] = 'video'
+
     def __init__(
         self,
         artifact_manager: ArtifactManager,
@@ -56,11 +62,11 @@ class EditVideo(AbstractNode[VideoEditingInput, VideoEditingOutput]):
     def execute(self, input: VideoEditingInput) -> VideoEditingOutput:
         # Build the payload with the script and audio/video media file paths
         payload: dict[str, Any] = {
-            'script': input.script.model_dump(),
-            'media_files': [
+            self._SCRIPT_KEY: input.script.model_dump(),
+            self._MEDIA_FILES_KEY: [
                 {
-                    'audio': str(self._artifact_manager.path(entry.audio)),
-                    'video': str(self._artifact_manager.path(entry.video)),
+                    self._AUDIO_KEY: str(self._artifact_manager.path(entry.audio)),
+                    self._VIDEO_KEY: str(self._artifact_manager.path(entry.video)),
                 }
                 for entry in input.media_files.entries
             ],
