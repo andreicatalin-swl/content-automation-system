@@ -6,6 +6,10 @@ from pydantic import BaseModel, ConfigDict
 
 from content_automation_system.countdown_agent.models.evaluation import Evaluation
 from content_automation_system.countdown_agent.models.script import Script
+from content_automation_system.countdown_agent.nodes.abstract_evaluate import (
+    AbstractEvaluate,
+    EvaluationInput,
+)
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
@@ -52,28 +56,7 @@ class GenerateScript(AbstractNode[ScriptGenerationInput, ScriptGenerationOutput]
 
         return ScriptGenerationOutput(script=Script.model_validate_json(final_response))
 
-class GeneratedScriptEvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    # Input for the GenerateScript node
-    script_generation_input: ScriptGenerationInput
-    # Output from the GenerateScript node
-    script_generation_output: ScriptGenerationOutput
-    # Instructions for evaluating output given the input
-    evaluation_instructions: str
-
-    def __repr__(self) -> str:
-        return f'{self.script_generation_output!r} against {self.evaluation_instructions}'
-
-class GeneratedScriptEvaluationOutput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    evaluation: Evaluation
-
-    def __repr__(self) -> str:
-        return repr(self.evaluation)
-
-class EvaluateGeneratedScript(AbstractNode[GeneratedScriptEvaluationInput, GeneratedScriptEvaluationOutput]):
+class EvaluateGeneratedScript(AbstractEvaluate[ScriptGenerationInput, ScriptGenerationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _INSTRUCTION_TEMPLATE: Final[str] = (
         'Evaluate the output of a node given its input, the required output schema, and the evaluation instructions.\n\n'
@@ -85,10 +68,10 @@ class EvaluateGeneratedScript(AbstractNode[GeneratedScriptEvaluationInput, Gener
         'Evaluation instructions: {evaluation_instructions}'
     )
 
-    def execute(self, input: GeneratedScriptEvaluationInput) -> GeneratedScriptEvaluationOutput:
+    def evaluate(self, input: EvaluationInput[ScriptGenerationInput, ScriptGenerationOutput]) -> Evaluation:
         instruction = self._INSTRUCTION_TEMPLATE.format(
-            input=input.script_generation_input.model_dump_json(),
-            output=input.script_generation_output.model_dump_json(),
+            input=input.node_input.model_dump_json(),
+            output=input.node_output.model_dump_json(),
             output_schema=json.dumps(ScriptGenerationOutput.model_json_schema()),
             evaluation_instructions=input.evaluation_instructions,
         )
@@ -106,4 +89,4 @@ class EvaluateGeneratedScript(AbstractNode[GeneratedScriptEvaluationInput, Gener
             _logger.error(message)
             raise RuntimeError(message)
 
-        return GeneratedScriptEvaluationOutput(evaluation=Evaluation.model_validate_json(final_response))
+        return Evaluation.model_validate_json(final_response)

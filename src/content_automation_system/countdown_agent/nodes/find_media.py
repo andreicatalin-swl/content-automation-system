@@ -9,6 +9,10 @@ from content_automation_system.countdown_agent.models.evaluation import (
 )
 from content_automation_system.countdown_agent.models.media_links import MediaLinks
 from content_automation_system.countdown_agent.models.script import Script
+from content_automation_system.countdown_agent.nodes.abstract_evaluate import (
+    AbstractEvaluate,
+    EvaluationInput,
+)
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
@@ -60,31 +64,10 @@ class FindMedia(AbstractNode[MediaFindingInput, MediaFindingOutput]):
 
         return MediaFindingOutput(media_links=MediaLinks.model_validate_json(final_response))
 
-class FoundMediaEvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    # Input for the FindMedia node
-    media_finding_input: MediaFindingInput
-    # Output from the FindMedia node
-    media_finding_output: MediaFindingOutput
-    # Instructions for evaluating output given the input
-    evaluation_instructions: str
-
-    def __repr__(self) -> str:
-        return f'{self.media_finding_output!r} against {self.evaluation_instructions}'
-
-class FoundMediaEvaluationOutput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    evaluation: Evaluation
-
-    def __repr__(self) -> str:
-        return repr(self.evaluation)
-
-# TODO: Implement proper execute(...) method
-class EvaluateFoundMedia(AbstractNode[FoundMediaEvaluationInput, FoundMediaEvaluationOutput]):
+# TODO: Implement proper evaluate(...) method
+class EvaluateFoundMedia(AbstractEvaluate[MediaFindingInput, MediaFindingOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
-    def execute(self, input: FoundMediaEvaluationInput) -> FoundMediaEvaluationOutput:
-        return FoundMediaEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
+    def evaluate(self, input: EvaluationInput[MediaFindingInput, MediaFindingOutput]) -> Evaluation:
+        return Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK)

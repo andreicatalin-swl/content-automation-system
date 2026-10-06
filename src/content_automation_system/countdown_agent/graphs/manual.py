@@ -5,19 +5,18 @@ from langgraph.graph.state import CompiledStateGraph  # type: ignore
 
 from content_automation_system.artifacts.artifact import Kind
 from content_automation_system.artifacts.artifact_manager import ArtifactManager
+from content_automation_system.countdown_agent.nodes.abstract_evaluate import EvaluationInput
 from content_automation_system.countdown_agent.nodes.decide import (
     Decide,
     DecisionInput,
 )
 from content_automation_system.countdown_agent.nodes.download_media import (
-    DownloadedMediaEvaluationInput,
     DownloadMedia,
     EvaluateDownloadedMedia,
     MediaDownloadInput,
     MediaDownloadOutput,
 )
 from content_automation_system.countdown_agent.nodes.edit_video import (
-    EditedVideoEvaluationInput,
     EditVideo,
     EvaluateEditedVideo,
     VideoEditingInput,
@@ -26,13 +25,11 @@ from content_automation_system.countdown_agent.nodes.edit_video import (
 from content_automation_system.countdown_agent.nodes.find_media import (
     EvaluateFoundMedia,
     FindMedia,
-    FoundMediaEvaluationInput,
     MediaFindingInput,
     MediaFindingOutput,
 )
 from content_automation_system.countdown_agent.nodes.generate_script import (
     EvaluateGeneratedScript,
-    GeneratedScriptEvaluationInput,
     GenerateScript,
     ScriptGenerationInput,
     ScriptGenerationOutput,
@@ -210,9 +207,9 @@ class Manual:
 
     def _run_evaluate_generated_script(self, state: State) -> dict[str, Any]:
         output = self._evaluate_generated_script(
-            GeneratedScriptEvaluationInput(
-                script_generation_input=self._script_generation_input(),
-                script_generation_output=ScriptGenerationOutput(script=self._require(state.script, 'script')),
+            EvaluationInput[ScriptGenerationInput, ScriptGenerationOutput](
+                node_input=self._script_generation_input(),
+                node_output=ScriptGenerationOutput(script=self._require(state.script, 'script')),
                 evaluation_instructions=self._script_evaluation_instructions,
             ),
         )
@@ -226,9 +223,9 @@ class Manual:
 
     def _run_evaluate_found_media(self, state: State) -> dict[str, Any]:
         output = self._evaluate_found_media(
-            FoundMediaEvaluationInput(
-                media_finding_input=self._media_finding_input(state),
-                media_finding_output=MediaFindingOutput(
+            EvaluationInput[MediaFindingInput, MediaFindingOutput](
+                node_input=self._media_finding_input(state),
+                node_output=MediaFindingOutput(
                     media_links=self._require(state.media_links, 'media links'),
                 ),
                 evaluation_instructions=self._found_media_evaluation_instructions,
@@ -244,9 +241,9 @@ class Manual:
 
     def _run_evaluate_downloaded_media(self, state: State) -> dict[str, Any]:
         output = self._evaluate_downloaded_media(
-            DownloadedMediaEvaluationInput(
-                media_download_input=self._media_download_input(state),
-                media_download_output=MediaDownloadOutput(
+            EvaluationInput[MediaDownloadInput, MediaDownloadOutput](
+                node_input=self._media_download_input(state),
+                node_output=MediaDownloadOutput(
                     media_files=self._require(state.media_files, 'media files'),
                 ),
                 evaluation_instructions=self._downloaded_media_evaluation_instructions,
@@ -262,9 +259,9 @@ class Manual:
 
     def _run_evaluate_edited_video(self, state: State) -> dict[str, Any]:
         output = self._evaluate_edited_video(
-            EditedVideoEvaluationInput(
-                video_editing_input=self._video_editing_input(state),
-                video_editing_output=VideoEditingOutput(video=self._require(state.video, 'video')),
+            EvaluationInput[VideoEditingInput, VideoEditingOutput](
+                node_input=self._video_editing_input(state),
+                node_output=VideoEditingOutput(video=self._require(state.video, 'video')),
                 evaluation_instructions=self._edited_video_evaluation_instructions,
             ),
         )
