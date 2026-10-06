@@ -23,11 +23,11 @@ htmlcov/
 
 playground/
 
-# content_agent
-src/content_automation_system/content_agent/credentials/
+# content
+src/content_automation_system/agents/content/credentials/
 
-# countdown_agent
-src/content_automation_system/countdown_agent/scripts/
+# countdown
+src/content_automation_system/agents/countdown/scripts/
 
 # Local PowerShell cache
 /Microsoft/
