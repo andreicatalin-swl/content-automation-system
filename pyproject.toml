@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "content-automation-pipeline"
+name = "content-automation-system"
 dynamic = ["version"]
-description = "An end-to-end AI-powered pipeline for researching, generating, rendering, and publishing YouTube Shorts."
+description = "An end-to-end system for managing and automating content workflows for multiple formats and platforms."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
@@ -34,10 +34,10 @@ dev = [
 ]
 
 [project.scripts]
-content-automation-pipeline = "content_automation_pipeline.__main__:main"
+content-automation-system = "content_automation_system.__main__:main"
 
 [tool.hatch.version]
-path = "src/content_automation_pipeline/__about__.py"
+path = "src/content_automation_system/__about__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/content_automation_pipeline"]
+packages = ["src/content_automation_system"]

@@ -24,7 +24,7 @@ htmlcov/
 playground/
 
 # content_agent
-src/content_automation_pipeline/content_agent/credentials/
+src/content_automation_system/content_agent/credentials/
 
 # Local PowerShell cache
 /Microsoft/

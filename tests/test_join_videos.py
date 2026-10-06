@@ -7,9 +7,9 @@ from unittest.mock import Mock, patch
 import imageio_ffmpeg
 import numpy as np
 
-from content_automation_pipeline.artifacts.artifact import Artifact, Kind
-from content_automation_pipeline.artifacts.artifact_manager import ArtifactManager
-from content_automation_pipeline.content_agent.nodes.join_videos import (
+from content_automation_system.artifacts.artifact import Artifact, Kind
+from content_automation_system.artifacts.artifact_manager import ArtifactManager
+from content_automation_system.content_agent.nodes.join_videos import (
     JoinVideos,
     VideoJoiningInput,
 )
