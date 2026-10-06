@@ -2,7 +2,9 @@
 
 // Edits the countdown template in Premiere Pro and exports it.
 //
-// Usage: node countdown_10.js '<payload json>' '<output video path>'
+// Usage: node countdown_10.js < payload.json
+// Reads JSON from stdin and writes the absolute exported video path to stdout.
+// Logs go to stderr. The script chooses the output directory and filename.
 //   payload.script      : { username, title1, title2, subheading, entries: [{ line }] }
 //   payload.media_files : [{ audio, video }]  (absolute native paths, backslashes on Windows)
 //
@@ -13,6 +15,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
+const { randomUUID } = require('crypto');
 
 // Hardcoded values that cannot be overridden by the caller
 const TEMPLATE_PATH = 'E:\\Adobe Premiere Pro 2020 Projects\\My Projects\\Templates\\Countdown 10.prproj';
@@ -404,10 +407,10 @@ function buildCopyPath() {
 }
 
 async function main() {
-    const payload = JSON.parse(process.argv[2]);
-    const outputPath = process.argv[3];
+    const payload = JSON.parse(fs.readFileSync(0, 'utf8'));
 
     validate(payload);
+    const outputPath = path.join(os.tmpdir(), `countdown-${randomUUID()}.mp4`);
     log(`editing ${ENTRY_COUNT} entries into ${outputPath}`);
 
     const core = require(findCoreLibPath());
@@ -460,7 +463,7 @@ async function main() {
         }
 
         log(`exported ${fs.statSync(outputPath).size} bytes`);
-        process.stdout.write(JSON.stringify({ video_path: outputPath, project_path: copyPath }));
+        process.stdout.write(outputPath);
     } finally {
         core.esdCleanup();
     }

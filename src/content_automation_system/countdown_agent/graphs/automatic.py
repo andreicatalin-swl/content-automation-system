@@ -3,7 +3,7 @@ from typing import Any, Final, TypeVar
 from langgraph.graph import END, START, StateGraph  # type: ignore
 from langgraph.graph.state import CompiledStateGraph  # type: ignore
 
-from content_automation_system.artifacts.artifact import Kind
+from content_automation_system.artifacts.artifact import Artifact, Kind
 from content_automation_system.artifacts.artifact_manager import ArtifactManager
 from content_automation_system.countdown_agent.models.evaluation import (
     Evaluation,
@@ -70,6 +70,7 @@ class Automatic:
         download_media_category: str,
         edit_video_artifact_manager: ArtifactManager,
         edit_video_category: str,
+        edit_video_script: Artifact,
         download_media_kind: Kind = _KIND,
         edit_video_kind: Kind = _KIND,
         generate_script_max_calls: int = _MAX_CALLS,
@@ -90,7 +91,7 @@ class Automatic:
         )
         self._evaluate_downloaded_media = EvaluateDownloadedMedia()
         self._edit_video = RateLimitingNodeDecorator(
-            EditVideo(edit_video_artifact_manager, edit_video_category, edit_video_kind),
+            EditVideo(edit_video_artifact_manager, edit_video_category, edit_video_kind, edit_video_script),
             edit_video_max_calls,
         )
         self._evaluate_edited_video = EvaluateEditedVideo()
