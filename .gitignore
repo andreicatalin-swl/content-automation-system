@@ -23,9 +23,6 @@ htmlcov/
 
 sandbox/
 
-# content
-src/content_automation_system/agents/content/credentials/
-
 # countdown
 src/content_automation_system/agents/countdown/scripts/
 

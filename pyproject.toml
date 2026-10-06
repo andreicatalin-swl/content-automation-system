@@ -13,19 +13,10 @@ authors = [
 ]
 dependencies = [
     "filelock>=3.0",
-    "google-api-python-client>=2.0",
-    "google-auth[requests]>=2.0",
-    "google-auth-oauthlib>=1.2",
     "imageio-ffmpeg>=0.5",
     "langgraph>=1.0",
-    "numpy>=2.0",
     "openai-codex>=0.147.0",
-    "pillow>=11.0",
     "pydantic>=2.0",
-    "torch>=2.9",
-    # Required by the Transformers depth-estimation image processor.
-    "torchvision>=0.24",
-    "transformers>=4.44",
     "yt-dlp>=2024.1",
 ]
 
