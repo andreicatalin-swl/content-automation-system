@@ -32,8 +32,8 @@ from content_automation_system.agents.content.nodes.post_youtube_video import (
     YoutubeVideoPostingInput,
 )
 from content_automation_system.agents.i2i.graphs.graph import Graph as I2IGraph
+from content_automation_system.agents.i2i.graphs.graph import State as I2IState
 from content_automation_system.agents.i2i.models.evaluation import Evaluation
-from content_automation_system.agents.i2i.states.state import State as I2IState
 from content_automation_system.artifacts.artifact import Artifact, Kind
 from content_automation_system.artifacts.artifact_manager import ArtifactManager
 from content_automation_system.utilities.logger import create_logger
