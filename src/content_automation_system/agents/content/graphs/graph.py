@@ -83,7 +83,7 @@ class State(BaseModel):
     youtube_url: str | None = None
     evaluations: list[Evaluation] = []
 
-class Graph1:
+class Graph:
     # Default values that can be overridden by the user
     _KIND: Final[Kind] = Kind.TEMPORARY
     _I2I_GENERATE_MAX_CALLS: Final[int] = 1
@@ -120,7 +120,7 @@ class Graph1:
         add_audio_kind: Kind = _KIND,
         i2i_generate_max_calls: int = _I2I_GENERATE_MAX_CALLS,
     ) -> None:
-        _logger.info('building content graph 1')
+        _logger.info('building content graph')
 
         self._generations = generations
         self._i2i_agents = [
@@ -182,7 +182,7 @@ class Graph1:
 
         self._compiled_state_graph: CompiledStateGraph[State, None, State, State] = graph.compile()  # type: ignore
 
-        _logger.info('finished building content graph 1')
+        _logger.info('finished building content graph')
 
     def get_compiled_state_graph(self) -> CompiledStateGraph[State, None, State, State]:
         return self._compiled_state_graph
