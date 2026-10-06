@@ -26,5 +26,8 @@ playground/
 # content_agent
 src/content_automation_system/content_agent/credentials/
 
+# countdown_agent
+src/content_automation_system/countdown_agent/scripts/
+
 # Local PowerShell cache
 /Microsoft/
