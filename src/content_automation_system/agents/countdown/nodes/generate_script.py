@@ -9,6 +9,7 @@ from content_automation_system.agents.countdown.models.script import Script
 from content_automation_system.agents.countdown.nodes.abstract_evaluate import (
     AbstractEvaluate,
     EvaluationInput,
+    EvaluationOutput,
 )
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
@@ -68,7 +69,7 @@ class EvaluateGeneratedScript(AbstractEvaluate[ScriptGenerationInput, ScriptGene
         'Evaluation instructions: {evaluation_instructions}'
     )
 
-    def evaluate(self, input: EvaluationInput[ScriptGenerationInput, ScriptGenerationOutput]) -> Evaluation:
+    def execute(self, input: EvaluationInput[ScriptGenerationInput, ScriptGenerationOutput]) -> EvaluationOutput:
         instruction = self._INSTRUCTION_TEMPLATE.format(
             input=input.node_input.model_dump_json(),
             output=input.node_output.model_dump_json(),
@@ -89,4 +90,4 @@ class EvaluateGeneratedScript(AbstractEvaluate[ScriptGenerationInput, ScriptGene
             _logger.error(message)
             raise RuntimeError(message)
 
-        return Evaluation.model_validate_json(final_response)
+        return EvaluationOutput(evaluation=Evaluation.model_validate_json(final_response))

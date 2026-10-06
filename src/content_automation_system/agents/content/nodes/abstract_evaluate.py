@@ -28,9 +28,6 @@ class EvaluationOutput(BaseModel):
         return repr(self.evaluation)
 
 class AbstractEvaluate(AbstractNode[EvaluationInput[T, U], EvaluationOutput], Generic[T, U]):
-    def execute(self, input: EvaluationInput[T, U]) -> EvaluationOutput:
-        return EvaluationOutput(evaluation=self.evaluate(input))
-
     @abstractmethod
-    def evaluate(self, input: EvaluationInput[T, U]) -> Evaluation:
+    def execute(self, input: EvaluationInput[T, U]) -> EvaluationOutput:
         ...

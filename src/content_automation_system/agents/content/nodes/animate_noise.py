@@ -19,6 +19,7 @@ from content_automation_system.agents.content.models.evaluation import (
 from content_automation_system.agents.content.nodes.abstract_evaluate import (
     AbstractEvaluate,
     EvaluationInput,
+    EvaluationOutput,
 )
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
@@ -162,10 +163,10 @@ class AnimateNoise(AbstractNode[NoiseAnimationInput, NoiseAnimationOutput]):
 
         return smoothed.astype(np.float32, copy=False)
 
-# TODO: Implement proper evaluate(...) method
+# TODO: Implement proper execute(...) method
 class EvaluateAnimatedNoise(AbstractEvaluate[NoiseAnimationInput, NoiseAnimationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
-    def evaluate(self, input: EvaluationInput[NoiseAnimationInput, NoiseAnimationOutput]) -> Evaluation:
-        return Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK)
+    def execute(self, input: EvaluationInput[NoiseAnimationInput, NoiseAnimationOutput]) -> EvaluationOutput:
+        return EvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))

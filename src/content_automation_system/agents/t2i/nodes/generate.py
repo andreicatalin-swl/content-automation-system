@@ -13,6 +13,7 @@ from content_automation_system.agents.t2i.models.evaluation import Evaluation
 from content_automation_system.agents.t2i.nodes.abstract_evaluate import (
     AbstractEvaluate,
     EvaluationInput,
+    EvaluationOutput,
 )
 from content_automation_system.utilities.logger import create_logger
 
@@ -96,7 +97,7 @@ class Evaluate(AbstractEvaluate[GenerationInput, GenerationOutput]):
     ) -> None:
         self._artifact_manager = artifact_manager
 
-    def evaluate(self, input: EvaluationInput[GenerationInput, GenerationOutput]) -> Evaluation:
+    def execute(self, input: EvaluationInput[GenerationInput, GenerationOutput]) -> EvaluationOutput:
         # Build the prompt for the evaluation
         prompt = self._PROMPT_TEMPLATE.format(
             generation_instructions=input.node_input.instructions,
@@ -118,4 +119,4 @@ class Evaluate(AbstractEvaluate[GenerationInput, GenerationOutput]):
             _logger.error(message)
             raise RuntimeError(message)
 
-        return Evaluation.model_validate_json(final_response)
+        return EvaluationOutput(evaluation=Evaluation.model_validate_json(final_response))
