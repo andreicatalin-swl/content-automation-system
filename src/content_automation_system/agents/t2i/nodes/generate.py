@@ -6,15 +6,15 @@ from typing import Final
 import openai_codex
 from pydantic import BaseModel, ConfigDict
 
-from content_automation_system.artifacts.artifact import Artifact, Kind
-from content_automation_system.artifacts.artifact_manager import ArtifactManager
-from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.agents.t2i.models.evaluation import Evaluation
 from content_automation_system.agents.t2i.nodes.abstract_evaluate import (
     AbstractEvaluate,
     EvaluationInput,
     EvaluationOutput,
 )
+from content_automation_system.artifacts.artifact import Artifact, Kind
+from content_automation_system.artifacts.artifact_manager import ArtifactManager
+from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
 _logger = create_logger(__name__)

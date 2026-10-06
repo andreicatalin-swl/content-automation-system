@@ -5,8 +5,6 @@ from typing import Any, Final
 
 from pydantic import BaseModel, ConfigDict
 
-from content_automation_system.artifacts.artifact import Artifact, Kind
-from content_automation_system.artifacts.artifact_manager import ArtifactManager
 from content_automation_system.agents.countdown.models.evaluation import (
     Evaluation,
     Grade,
@@ -18,6 +16,8 @@ from content_automation_system.agents.countdown.nodes.abstract_evaluate import (
     EvaluationInput,
     EvaluationOutput,
 )
+from content_automation_system.artifacts.artifact import Artifact, Kind
+from content_automation_system.artifacts.artifact_manager import ArtifactManager
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 

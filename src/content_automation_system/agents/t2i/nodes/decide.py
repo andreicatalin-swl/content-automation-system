@@ -1,10 +1,10 @@
 from pydantic import BaseModel, ConfigDict
 
-from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.agents.t2i.models.evaluation import (
     Evaluation,
     Grade,
 )
+from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
 _logger = create_logger(__name__)

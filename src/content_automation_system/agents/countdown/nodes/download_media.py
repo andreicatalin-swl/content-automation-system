@@ -2,8 +2,6 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict
 
-from content_automation_system.artifacts.artifact import Kind
-from content_automation_system.artifacts.artifact_manager import ArtifactManager
 from content_automation_system.agents.countdown.models.evaluation import (
     Evaluation,
     Grade,
@@ -13,14 +11,16 @@ from content_automation_system.agents.countdown.models.media_files import (
     MediaFiles,
 )
 from content_automation_system.agents.countdown.models.media_links import MediaLinks
-from content_automation_system.agents.countdown.tools.youtube_downloader import (
-    YoutubeDownloader,
-)
 from content_automation_system.agents.countdown.nodes.abstract_evaluate import (
     AbstractEvaluate,
     EvaluationInput,
     EvaluationOutput,
 )
+from content_automation_system.agents.countdown.tools.youtube_downloader import (
+    YoutubeDownloader,
+)
+from content_automation_system.artifacts.artifact import Kind
+from content_automation_system.artifacts.artifact_manager import ArtifactManager
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 

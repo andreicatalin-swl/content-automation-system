@@ -3,13 +3,13 @@ from typing import Any, Final, TypeVar
 from langgraph.graph import END, START, StateGraph  # type: ignore
 from langgraph.graph.state import CompiledStateGraph  # type: ignore
 
-from content_automation_system.artifacts.artifact import Artifact, Kind
-from content_automation_system.artifacts.artifact_manager import ArtifactManager
 from content_automation_system.agents.countdown.models.evaluation import (
     Evaluation,
     Grade,
 )
-from content_automation_system.agents.countdown.nodes.abstract_evaluate import EvaluationInput
+from content_automation_system.agents.countdown.nodes.abstract_evaluate import (
+    EvaluationInput,
+)
 from content_automation_system.agents.countdown.nodes.decide import (
     Decide,
     DecisionInput,
@@ -39,6 +39,8 @@ from content_automation_system.agents.countdown.nodes.generate_script import (
     ScriptGenerationOutput,
 )
 from content_automation_system.agents.countdown.states.state import State
+from content_automation_system.artifacts.artifact import Artifact, Kind
+from content_automation_system.artifacts.artifact_manager import ArtifactManager
 from content_automation_system.shared.rate_limiting_node_decorator import (
     RateLimitingNodeDecorator,
 )
