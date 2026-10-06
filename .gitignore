@@ -21,7 +21,7 @@ htmlcov/
 .vscode/
 .idea/
 
-playground/
+sandbox/
 
 # countdown
 src/content_automation_system/agents/countdown/scripts/
