@@ -16,6 +16,10 @@ from content_automation_system.content_agent.models.evaluation import (
     Evaluation,
     Grade,
 )
+from content_automation_system.content_agent.nodes.abstract_evaluate import (
+    AbstractEvaluate,
+    EvaluationInput,
+)
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
@@ -86,28 +90,10 @@ class ConvertImage(AbstractNode[ImageConversionInput, ImageConversionOutput]):
 
         return ImageConversionOutput(video=artifact)
 
-class ConvertedImageEvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    image_conversion_input: ImageConversionInput
-    image_conversion_output: ImageConversionOutput
-    instructions: str
-
-    def __repr__(self) -> str:
-        return f'{self.image_conversion_output!r} against {self.instructions}'
-
-class ConvertedImageEvaluationOutput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    evaluation: Evaluation
-
-    def __repr__(self) -> str:
-        return repr(self.evaluation)
-
-# TODO: Implement proper execute(...) -> ... method
-class EvaluateConvertedImage(AbstractNode[ConvertedImageEvaluationInput, ConvertedImageEvaluationOutput]):
+# TODO: Implement proper evaluate(...) method
+class EvaluateConvertedImage(AbstractEvaluate[ImageConversionInput, ImageConversionOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
-    def execute(self, input: ConvertedImageEvaluationInput) -> ConvertedImageEvaluationOutput:
-        return ConvertedImageEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
+    def evaluate(self, input: EvaluationInput[ImageConversionInput, ImageConversionOutput]) -> Evaluation:
+        return Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK)

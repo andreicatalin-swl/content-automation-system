@@ -10,6 +10,10 @@ from content_automation_system.artifacts.artifact import Artifact, Kind
 from content_automation_system.artifacts.artifact_manager import ArtifactManager
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.t2i_agent.models.evaluation import Evaluation
+from content_automation_system.t2i_agent.nodes.abstract_evaluate import (
+    AbstractEvaluate,
+    EvaluationInput,
+)
 from content_automation_system.utilities.logger import create_logger
 
 _logger = create_logger(__name__)
@@ -73,25 +77,7 @@ class Generate(AbstractNode[GenerationInput, GenerationOutput]):
 
         return GenerationOutput(image=artifact)
 
-class EvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    generation_input: GenerationInput
-    generation_output: GenerationOutput
-    instructions: str
-
-    def __repr__(self) -> str:
-        return f'{self.generation_output!r} against {self.instructions}'
-
-class EvaluationOutput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    evaluation: Evaluation
-
-    def __repr__(self) -> str:
-        return repr(self.evaluation)
-
-class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
+class Evaluate(AbstractEvaluate[GenerationInput, GenerationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _PROMPT_TEMPLATE: Final[str] = (
         'Check the generated image against the generation instructions and the generation feedback it had to '
@@ -110,13 +96,13 @@ class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
     ) -> None:
         self._artifact_manager = artifact_manager
 
-    def execute(self, input: EvaluationInput) -> EvaluationOutput:
+    def evaluate(self, input: EvaluationInput[GenerationInput, GenerationOutput]) -> Evaluation:
         # Build the prompt for the evaluation
         prompt = self._PROMPT_TEMPLATE.format(
-            generation_instructions=input.generation_input.instructions,
-            generation_feedback='\n'.join(input.generation_input.feedback),
-            instructions=input.instructions,
-            image_path=self._artifact_manager.path(input.generation_output.image),
+            generation_instructions=input.node_input.instructions,
+            generation_feedback='\n'.join(input.node_input.feedback),
+            instructions=input.evaluation_instructions,
+            image_path=self._artifact_manager.path(input.node_output.image),
         )
 
         # Use OpenAI Codex for the evaluation
@@ -132,4 +118,4 @@ class Evaluate(AbstractNode[EvaluationInput, EvaluationOutput]):
             _logger.error(message)
             raise RuntimeError(message)
 
-        return EvaluationOutput(evaluation=Evaluation.model_validate_json(final_response))
+        return Evaluation.model_validate_json(final_response)

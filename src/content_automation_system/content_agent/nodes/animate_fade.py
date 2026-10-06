@@ -15,6 +15,10 @@ from content_automation_system.content_agent.models.evaluation import (
     Evaluation,
     Grade,
 )
+from content_automation_system.content_agent.nodes.abstract_evaluate import (
+    AbstractEvaluate,
+    EvaluationInput,
+)
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
@@ -106,28 +110,10 @@ class AnimateFade(AbstractNode[FadeAnimationInput, FadeAnimationOutput]):
 
         return FadeAnimationOutput(video=artifact)
 
-class AnimatedFadeEvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    fade_animation_input: FadeAnimationInput
-    fade_animation_output: FadeAnimationOutput
-    instructions: str
-
-    def __repr__(self) -> str:
-        return f'{self.fade_animation_output!r} against {self.instructions}'
-
-class AnimatedFadeEvaluationOutput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    evaluation: Evaluation
-
-    def __repr__(self) -> str:
-        return repr(self.evaluation)
-
-# TODO: Implement proper execute(...) -> ... method
-class EvaluateAnimatedFade(AbstractNode[AnimatedFadeEvaluationInput, AnimatedFadeEvaluationOutput]):
+# TODO: Implement proper evaluate(...) method
+class EvaluateAnimatedFade(AbstractEvaluate[FadeAnimationInput, FadeAnimationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
-    def execute(self, input: AnimatedFadeEvaluationInput) -> AnimatedFadeEvaluationOutput:
-        return AnimatedFadeEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
+    def evaluate(self, input: EvaluationInput[FadeAnimationInput, FadeAnimationOutput]) -> Evaluation:
+        return Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK)

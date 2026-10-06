@@ -15,6 +15,10 @@ from content_automation_system.content_agent.models.evaluation import (
     Evaluation,
     Grade,
 )
+from content_automation_system.content_agent.nodes.abstract_evaluate import (
+    AbstractEvaluate,
+    EvaluationInput,
+)
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
@@ -123,28 +127,10 @@ class JoinVideos(AbstractNode[VideoJoiningInput, VideoJoiningOutput]):
 
         return VideoJoiningOutput(video=artifact)
 
-class JoinedVideosEvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    video_joining_input: VideoJoiningInput
-    video_joining_output: VideoJoiningOutput
-    instructions: str
-
-    def __repr__(self) -> str:
-        return f'{self.video_joining_output!r} against {self.instructions}'
-
-class JoinedVideosEvaluationOutput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    evaluation: Evaluation
-
-    def __repr__(self) -> str:
-        return repr(self.evaluation)
-
-# TODO: Implement proper execute(...) -> ... method
-class EvaluateJoinedVideos(AbstractNode[JoinedVideosEvaluationInput, JoinedVideosEvaluationOutput]):
+# TODO: Implement proper evaluate(...) method
+class EvaluateJoinedVideos(AbstractEvaluate[VideoJoiningInput, VideoJoiningOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
-    def execute(self, input: JoinedVideosEvaluationInput) -> JoinedVideosEvaluationOutput:
-        return JoinedVideosEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
+    def evaluate(self, input: EvaluationInput[VideoJoiningInput, VideoJoiningOutput]) -> Evaluation:
+        return Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK)

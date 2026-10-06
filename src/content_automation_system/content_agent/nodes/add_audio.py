@@ -14,6 +14,10 @@ from content_automation_system.content_agent.models.evaluation import (
     Evaluation,
     Grade,
 )
+from content_automation_system.content_agent.nodes.abstract_evaluate import (
+    AbstractEvaluate,
+    EvaluationInput,
+)
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
@@ -90,28 +94,10 @@ class AddAudio(AbstractNode[AudioAdditionInput, AudioAdditionOutput]):
 
         return AudioAdditionOutput(video=artifact)
 
-class AddedAudioEvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    audio_addition_input: AudioAdditionInput
-    audio_addition_output: AudioAdditionOutput
-    instructions: str
-
-    def __repr__(self) -> str:
-        return f'{self.audio_addition_output!r} against {self.instructions}'
-
-class AddedAudioEvaluationOutput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    evaluation: Evaluation
-
-    def __repr__(self) -> str:
-        return repr(self.evaluation)
-
-# TODO: Implement proper execute(...) -> ... method
-class EvaluateAddedAudio(AbstractNode[AddedAudioEvaluationInput, AddedAudioEvaluationOutput]):
+# TODO: Implement proper evaluate(...) method
+class EvaluateAddedAudio(AbstractEvaluate[AudioAdditionInput, AudioAdditionOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
-    def execute(self, input: AddedAudioEvaluationInput) -> AddedAudioEvaluationOutput:
-        return AddedAudioEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
+    def evaluate(self, input: EvaluationInput[AudioAdditionInput, AudioAdditionOutput]) -> Evaluation:
+        return Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK)

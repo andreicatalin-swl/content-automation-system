@@ -16,6 +16,10 @@ from content_automation_system.content_agent.models.evaluation import (
     Evaluation,
     Grade,
 )
+from content_automation_system.content_agent.nodes.abstract_evaluate import (
+    AbstractEvaluate,
+    EvaluationInput,
+)
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
@@ -158,28 +162,10 @@ class AnimateNoise(AbstractNode[NoiseAnimationInput, NoiseAnimationOutput]):
 
         return smoothed.astype(np.float32, copy=False)
 
-class AnimatedNoiseEvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    noise_animation_input: NoiseAnimationInput
-    noise_animation_output: NoiseAnimationOutput
-    instructions: str
-
-    def __repr__(self) -> str:
-        return f'{self.noise_animation_output!r} against {self.instructions}'
-
-class AnimatedNoiseEvaluationOutput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    evaluation: Evaluation
-
-    def __repr__(self) -> str:
-        return repr(self.evaluation)
-
-# TODO: Implement proper execute(...) -> ... method
-class EvaluateAnimatedNoise(AbstractNode[AnimatedNoiseEvaluationInput, AnimatedNoiseEvaluationOutput]):
+# TODO: Implement proper evaluate(...) method
+class EvaluateAnimatedNoise(AbstractEvaluate[NoiseAnimationInput, NoiseAnimationOutput]):
     # Hardcoded values that cannot be overridden by the user
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
-    def execute(self, input: AnimatedNoiseEvaluationInput) -> AnimatedNoiseEvaluationOutput:
-        return AnimatedNoiseEvaluationOutput(evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK))
+    def evaluate(self, input: EvaluationInput[NoiseAnimationInput, NoiseAnimationOutput]) -> Evaluation:
+        return Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK)

@@ -13,6 +13,10 @@ from content_automation_system.content_agent.models.evaluation import (
 from content_automation_system.content_agent.tools.youtube_uploader import (
     YoutubeUploader,
 )
+from content_automation_system.content_agent.nodes.abstract_evaluate import (
+    AbstractEvaluate,
+    EvaluationInput,
+)
 from content_automation_system.shared.abstract_node import AbstractNode
 from content_automation_system.utilities.logger import create_logger
 
@@ -103,31 +107,9 @@ class PostYoutubeVideo(AbstractNode[YoutubeVideoPostingInput, YoutubeVideoPostin
             },
         }
 
-class PostedYoutubeVideoEvaluationInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    youtube_video_posting_input: YoutubeVideoPostingInput
-    youtube_video_posting_output: YoutubeVideoPostingOutput
-    instructions: str
-
-    def __repr__(self) -> str:
-        return f'{self.youtube_video_posting_output!r} against {self.instructions}'
-
-class PostedYoutubeVideoEvaluationOutput(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-
-    evaluation: Evaluation
-
-    def __repr__(self) -> str:
-        return repr(self.evaluation)
-
-# TODO: Implement proper execute(...) -> ... method
-class EvaluatePostedYoutubeVideo(
-    AbstractNode[PostedYoutubeVideoEvaluationInput, PostedYoutubeVideoEvaluationOutput]
-):
+# TODO: Implement proper evaluate(...) method
+class EvaluatePostedYoutubeVideo(AbstractEvaluate[YoutubeVideoPostingInput, YoutubeVideoPostingOutput]):
     _NO_FEEDBACK: Final[str] = 'there is no feedback.'
 
-    def execute(self, input: PostedYoutubeVideoEvaluationInput) -> PostedYoutubeVideoEvaluationOutput:
-        return PostedYoutubeVideoEvaluationOutput(
-            evaluation=Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK),
-        )
+    def evaluate(self, input: EvaluationInput[YoutubeVideoPostingInput, YoutubeVideoPostingOutput]) -> Evaluation:
+        return Evaluation(grade=Grade.PASS, feedback=self._NO_FEEDBACK)

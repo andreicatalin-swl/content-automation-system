@@ -5,13 +5,13 @@ from langgraph.graph.state import CompiledStateGraph  # type: ignore
 
 from content_automation_system.artifacts.artifact import Kind
 from content_automation_system.artifacts.artifact_manager import ArtifactManager
+from content_automation_system.i2i_agent.nodes.abstract_evaluate import EvaluationInput
 from content_automation_system.i2i_agent.nodes.decide import (
     Decide,
     DecisionInput,
 )
 from content_automation_system.i2i_agent.nodes.generate import (
     Evaluate,
-    EvaluationInput,
     Generate,
     GenerationInput,
     GenerationOutput,
@@ -87,14 +87,14 @@ class Graph:
 
     def _run_evaluate(self, state: State) -> dict[str, Any]:
         output = self._evaluate(
-            EvaluationInput(
-                generation_input=GenerationInput(
+            EvaluationInput[GenerationInput, GenerationOutput](
+                node_input=GenerationInput(
                     images=state.images,
                     instructions=state.generation_instructions,
                     feedback=state.feedback,
                 ),
-                generation_output=GenerationOutput(image=self._require(state.image, 'image')),
-                instructions=state.evaluation_instructions,
+                node_output=GenerationOutput(image=self._require(state.image, 'image')),
+                evaluation_instructions=state.evaluation_instructions,
             ),
         )
 
